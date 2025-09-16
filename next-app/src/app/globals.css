@@ -1,0 +1,135 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 25% 97%;
+    --foreground: 220 15% 15%;
+
+    --card: 220 25% 98%;
+    --card-foreground: 220 15% 15%;
+
+    --popover: 220 25% 98%;
+    --popover-foreground: 220 15% 15%;
+
+    --primary: 166 85% 28%;
+    --primary-foreground: 0 0% 98%;
+
+    --secondary: 220 15% 90%;
+    --secondary-foreground: 220 15% 25%;
+
+    --muted: 220 15% 92%;
+    --muted-foreground: 220 12% 45%;
+
+    --accent: 166 60% 85%;
+    --accent-foreground: 166 85% 15%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 15% 85%;
+    --input: 220 15% 90%;
+    --ring: 166 85% 28%;
+
+    --radius: 0.75rem;
+
+    --chart-1: 166 85% 28%;
+    --chart-2: 200 85% 45%;
+    --chart-3: 240 60% 60%;
+    --chart-4: 280 65% 55%;
+    --chart-5: 320 70% 50%;
+  }
+
+  .dark {
+    --background: 220 25% 6%;
+    --foreground: 220 15% 92%;
+
+    --card: 220 25% 8%;
+    --card-foreground: 220 15% 92%;
+
+    --popover: 220 25% 8%;
+    --popover-foreground: 220 15% 92%;
+
+    --primary: 166 85% 45%;
+    --primary-foreground: 220 25% 8%;
+
+    --secondary: 220 15% 15%;
+    --secondary-foreground: 220 15% 85%;
+
+    --muted: 220 15% 12%;
+    --muted-foreground: 220 12% 65%;
+
+    --accent: 166 60% 25%;
+    --accent-foreground: 166 85% 85%;
+
+    --destructive: 0 62.8% 50%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 15% 18%;
+    --input: 220 15% 15%;
+    --ring: 166 85% 45%;
+    
+    --chart-1: 166 85% 45%;
+    --chart-2: 200 85% 55%;
+    --chart-3: 240 60% 70%;
+    --chart-4: 280 65% 65%;
+    --chart-5: 320 70% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .gradient-bg {
+    background: linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--accent)) 100%);
+  }
+  
+  .card-gradient {
+    background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--accent) / 0.3) 100%);
+  }
+  
+  .text-gradient {
+    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--chart-2)) 100%);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-size: 200% 200%;
+    animation: gradient 3s ease infinite;
+  }
+  
+  .glass-effect {
+    backdrop-filter: blur(12px);
+    background: hsl(var(--card) / 0.8);
+    border: 1px solid hsl(var(--border) / 0.2);
+  }
+  
+  @keyframes gradient {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+  
+  .hover-lift {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px hsl(var(--primary) / 0.25), 0 8px 10px -6px hsl(var(--primary) / 0.1);
+  }
+}
