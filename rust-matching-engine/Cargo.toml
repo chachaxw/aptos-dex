@@ -63,5 +63,8 @@ reqwest = { version = "0.12.4", features = ["json"] }
 # BCS serialization
 bcs = "0.1.4"
 
+# Hex encoding/decoding
+hex = "0.4.3"
+
 # Redis for caching and persistence
 redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }

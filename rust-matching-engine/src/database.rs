@@ -39,6 +39,12 @@ impl Database {
     async fn run_migrations(&self) -> Result<()> {
         info!("Running database migrations");
         
+        // Create custom types first with proper error handling
+        self.create_type_if_not_exists("order_side", "('buy', 'sell')").await?;
+        self.create_type_if_not_exists("order_type", "('market', 'limit')").await?;
+        self.create_type_if_not_exists("order_status", "('pending', 'partially_filled', 'filled', 'cancelled', 'expired')").await?;
+        self.create_type_if_not_exists("settlement_status", "('pending', 'submitted', 'confirmed', 'failed')").await?;
+        
         sqlx::query(
             r#"
             CREATE TABLE IF NOT EXISTS orders (
@@ -97,33 +103,35 @@ impl Database {
         .execute(&self.pool)
         .await?;
 
-        // Create custom types
-        sqlx::query("CREATE TYPE IF NOT EXISTS order_side AS ENUM ('buy', 'sell');")
-            .execute(&self.pool)
-            .await?;
-            
-        sqlx::query("CREATE TYPE IF NOT EXISTS order_type AS ENUM ('market', 'limit');")
-            .execute(&self.pool)
-            .await?;
-            
-        sqlx::query("CREATE TYPE IF NOT EXISTS order_status AS ENUM ('pending', 'partiallyfilled', 'filled', 'cancelled', 'expired');")
-            .execute(&self.pool)
-            .await?;
-            
-        sqlx::query("CREATE TYPE IF NOT EXISTS settlement_status AS ENUM ('pending', 'submitted', 'confirmed', 'failed');")
-            .execute(&self.pool)
-            .await?;
-
         // Create indexes
-        sqlx::query("CREATE INDEX IF NOT EXISTS idx_orders_market_status ON orders(market_id, status);")
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_orders_market_status ON orders(market_id, status)")
             .execute(&self.pool)
             .await?;
             
-        sqlx::query("CREATE INDEX IF NOT EXISTS idx_trades_settlement_batch ON trades(settlement_batch_id);")
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_trades_settlement_batch ON trades(settlement_batch_id)")
             .execute(&self.pool)
             .await?;
 
         debug!("Database migrations completed");
+        Ok(())
+    }
+    
+    async fn create_type_if_not_exists(&self, type_name: &str, values: &str) -> Result<()> {
+        let check_query = format!("SELECT 1 FROM pg_type WHERE typname = '{}'", type_name);
+        let exists = sqlx::query(&check_query)
+            .fetch_optional(&self.pool)
+            .await?;
+            
+        if exists.is_none() {
+            let create_query = format!("CREATE TYPE {} AS ENUM {}", type_name, values);
+            sqlx::query(&create_query)
+                .execute(&self.pool)
+                .await?;
+            debug!("Created type: {}", type_name);
+        } else {
+            debug!("Type {} already exists", type_name);
+        }
+        
         Ok(())
     }
 
@@ -180,7 +188,7 @@ impl Database {
             r#"
             UPDATE orders 
             SET status = 'cancelled', updated_at = NOW() 
-            WHERE id = $1 AND status IN ('pending', 'partiallyfilled')
+            WHERE id = $1 AND status IN ('pending', 'partially_filled')
             "#,
         )
         .bind(order_id)
@@ -197,7 +205,7 @@ impl Database {
                    size, price, filled_size, status, created_at, 
                    updated_at, expires_at
             FROM orders 
-            WHERE status IN ('pending', 'partiallyfilled')
+            WHERE status IN ('pending', 'partially_filled')
             ORDER BY created_at ASC
             "#,
         )

@@ -13,7 +13,7 @@ use crate::{
 };
 
 pub struct SettlementService {
-    aptos_client: Arc<tokio::sync::Mutex<AptosClient>>,
+    aptos_client: Arc<tokio::sync::Mutex<Arc<AptosClient>>>,
     database: Arc<Database>,
     config: SettlementConfig,
 }
@@ -25,7 +25,7 @@ impl SettlementService {
         config: SettlementConfig,
     ) -> Result<Self> {
         Ok(Self {
-            aptos_client: Arc::new(tokio::sync::Mutex::new(Arc::try_unwrap(aptos_client).unwrap())),
+            aptos_client: Arc::new(tokio::sync::Mutex::new(aptos_client)),
             database,
             config,
         })
@@ -146,7 +146,7 @@ impl SettlementService {
 
         // Submit to blockchain with timeout
         let settlement_future = async {
-            let mut client = self.aptos_client.lock().await;
+            let client = self.aptos_client.lock().await;
             client.submit_settlement_batch(batch).await
         };
 

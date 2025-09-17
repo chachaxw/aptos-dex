@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use aptos_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
 use aptos_crypto::ValidCryptoMaterialStringExt;
 use aptos_rust_sdk::client::builder::AptosClientBuilder;
+use hex;
 use aptos_rust_sdk::client::config::AptosNetwork;
 use aptos_rust_sdk_types::api_types::{
     address::AccountAddress,
@@ -13,6 +14,7 @@ use aptos_rust_sdk_types::api_types::{
     transaction_authenticator::TransactionAuthenticator,
 };
 use rust_decimal::Decimal;
+use std::convert::TryFrom;
 use std::str::FromStr;
 use tracing::info;
 
@@ -31,6 +33,20 @@ pub struct AptosClient {
 }
 
 impl AptosClient {
+    fn parse_private_key(key_str: &str) -> Result<Ed25519PrivateKey> {
+        // Remove the "ed25519-priv-0x" prefix if present
+        let hex_str = key_str
+            .strip_prefix("ed25519-priv-0x")
+            .unwrap_or(key_str);
+        
+        // Convert hex string to bytes
+        let bytes = hex::decode(hex_str)
+            .context("Failed to decode private key hex string")?;
+        
+        // Create Ed25519PrivateKey from bytes
+        Ed25519PrivateKey::try_from(bytes.as_slice())
+            .context("Failed to create Ed25519PrivateKey from bytes")
+    }
     pub async fn new(config: &AptosConfig) -> Result<Self> {
         // Create client using the new SDK
         let network = match config.chain_id {
@@ -40,8 +56,8 @@ impl AptosClient {
         };
         let client = AptosClientBuilder::new(network).build();
         
-        // Load admin private key
-        let private_key = Ed25519PrivateKey::from_encoded_string(&config.admin_private_key)
+        // Load admin private key - parse from config format (ed25519-priv-0x...)
+        let private_key = Self::parse_private_key(&config.admin_private_key)
             .context("Failed to parse admin private key")?;
         
         let admin_address = AccountAddress::from_str(&config.admin_address)?;
@@ -68,7 +84,7 @@ impl AptosClient {
 
 
     pub async fn submit_settlement_batch(
-        &mut self,
+        &self,
         batch: &SettlementBatch,
     ) -> Result<String> {
         info!("Submitting settlement batch: {} trades", batch.trades.len());
