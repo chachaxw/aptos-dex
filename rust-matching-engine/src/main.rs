@@ -27,7 +27,6 @@ use crate::{
     aptos_client::AptosClient,
     settlement::SettlementService,
 };
-
 pub type SharedState = Arc<AppState>;
 
 pub struct AppState {

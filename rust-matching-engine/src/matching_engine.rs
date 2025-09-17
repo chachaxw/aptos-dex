@@ -17,7 +17,7 @@ pub struct MatchingEngine {
 }
 
 pub struct OrderBook {
-    market_id: u64,
+    pub market_id: u64,
     bids: Vec<Order>, // Buy orders, sorted by price descending
     asks: Vec<Order>, // Sell orders, sorted by price ascending
 }

@@ -4,9 +4,16 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-# Aptos SDK
-aptos-sdk = "2.0.0"
-aptos-types = "0.1.0"
+aptos-rust-sdk = {git = "https://github.com/aptos-labs/aptos-rust-sdk", package = "aptos-rust-sdk"}
+aptos-rust-sdk-types = {git = "https://github.com/aptos-labs/aptos-rust-sdk", package = "aptos-rust-sdk-types"}
+#aptos-sdk = { git = "https://github.com/aptos-labs/aptos-core", branch = "devnet" }
+
+#aptos-indexer-processor-sdk = { git = "https://github.com/aptos-labs/aptos-indexer-processor-sdk.git", rev = "ca658a0881c4bff4e1dee14c59a7c63608a5b315" }
+#aptos-indexer-processor-sdk-server-framework = { git = "https://github.com/aptos-labs/aptos-indexer-processor-sdk.git", rev = "ca658a0881c4bff4e1dee14c59a7c63608a5b315" }
+
+#[patch.crates-io]
+#merlin = { git = "https://github.com/aptos-labs/merlin" }
+#x25519-dalek = { git = "https://github.com/aptos-labs/x25519-dalek", branch = "zeroize_v1" }
 
 # Web framework
 axum = "0.7.5"
@@ -44,8 +51,6 @@ tracing-subscriber = "0.3.18"
 config = "0.14.0"
 dotenvy = "0.15.7"
 
-# Matching engine
-orderbook-rs = "0.3.0"
 
 # Async channels
 tokio-util = "0.7.11"
