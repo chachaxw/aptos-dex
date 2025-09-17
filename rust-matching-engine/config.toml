@@ -6,7 +6,7 @@ port = 8080
 node_url = "https://fullnode.testnet.aptoslabs.com/v1"
 admin_address = "0xf088abc10dd7dbc83f95cd621fa85964a8f5d7efecf10272fb2cc6a909b8e647"
 admin_private_key = "ed25519-priv-0xc919a81b08fd79a13936d4c8cde5aef42c79b4bf4b9493c7d9915758bf07ddfb"
-contract_address = "0xc0ffee"
+contract_address = "0xf088abc10dd7dbc83f95cd621fa85964a8f5d7efecf10272fb2cc6a909b8e647"
 chain_id = 2
 
 [settlement]

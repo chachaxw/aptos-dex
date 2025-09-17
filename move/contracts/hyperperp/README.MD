@@ -23,4 +23,4 @@ This is a simple message board contract that allows users to post messages on-ch
 6. risk（占位的保证金校验）
 7. perp_engine（批量结算接口 apply_batch / 基础撮合填单逻辑）
 8. liquidation（最简全平清算流程）
-9. tests/basic（基础单测样例，确保能编译与跑通入口）
+9. tests/（基础单测样例，确保能编译与跑通入口）
