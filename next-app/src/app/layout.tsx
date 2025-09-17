@@ -18,7 +18,7 @@ const fontSans = FontSans({
 });
 
 export const metadata: Metadata = {
-  title: "Aptos Full Stack Demo",
+  title: "HyperPerp Demo",
   description: "A demo of a full stack app on Aptos",
 };
 
@@ -43,11 +43,8 @@ const RootLayout = ({ children }: PropsWithChildren) => {
                 <RootHeader />
                 <WrongNetworkAlert />
                 <main className="flex-1">
-                  <div className="container mx-auto px-6 py-8 max-w-6xl">
-                    {children}
-                  </div>
+                  {children}
                 </main>
-                <RootFooter />
                 <Toaster />
               </div>
             </WalletProvider>

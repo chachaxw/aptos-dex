@@ -6,14 +6,15 @@ echo "##### Deploy module under a new object #####"
 
 # Profile is the account you used to execute transaction
 # Run "aptos init" to create the profile, then get the profile name from .aptos/config.yaml
-PUBLISHER_PROFILE=testnet-profile-1
+PUBLISHER_PROFILE=hyperperp-testnet
 
 PUBLISHER_ADDR=0x$(aptos config show-profiles --profile=$PUBLISHER_PROFILE | grep 'account' | sed -n 's/.*"account": \"\(.*\)\".*/\1/p')
   
 OUTPUT=$(aptos move create-object-and-publish-package \
-  --address-name hyperperp_addr \
-  --named-addresses hyperperp_addr=$PUBLISHER_ADDR \
+  --address-name admin \
+  --named-addresses admin=$PUBLISHER_ADDR \
   --profile $PUBLISHER_PROFILE \
+  --skip-fetch-latest-git-deps \
 	--assume-yes)
 
 # Extract the published contract address and save it to a file

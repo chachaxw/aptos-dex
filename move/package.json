@@ -1,21 +1,31 @@
 {
-  "name": "move",
+  "name": "hyperperp",
   "version": "1.0.0",
+  "description": "HyperPerp comprehensive test suite",
   "main": "index.js",
   "scripts": {
-    "test": "npx aptos-workspace test"
+    "test": "npm run test:move && npm run test:ts",
+    "test:move": "cd contracts/hyperperp && aptos move test --skip-fetch-latest-git-deps",
+    "test:comprehensive": "npx mocha tests/hyperperp-test.ts --timeout 120000",
+    "test:integration": "npx mocha tests/matching-engine-integration.ts --timeout 60000",
+    "test:all": "npm run test:move && npm run test:comprehensive && npm run test:integration",
+    "build": "cd contracts/hyperperp && aptos move compile",
+    "deploy:testnet": "cd contracts/hyperperp && aptos move publish --profile hyperperp-testnet",
+    "clean": "cd contracts/hyperperp && rm -rf build"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "keywords": ["aptos", "move", "dex", "perpetual", "trading"],
+  "author": "HyperPerp Team",
+  "license": "MIT",
   "devDependencies": {
     "@aptos-labs/aptos-cli": "^1.0.2",
     "@aptos-labs/workspace": "^0.0.26",
     "@types/chai": "^4.3.20",
     "@types/mocha": "^10.0.10",
+    "@types/node": "^20.0.0",
     "chai": "^4.5.0",
+    "mocha": "^10.2.0",
+    "typescript": "^5.7.3",
     "ts-node": "^10.9.2",
-    "typescript": "^5.7.3"
+    "axios": "^1.6.0"
   }
 }

@@ -1,7 +1,5 @@
 module hyperperp::events {
     use std::event;
-    use std::signer;
-    use std::vector;
 
     /// Global event handles stored under hyperperp resource account
     struct EventStore has key {

@@ -4,7 +4,7 @@ import { WalletSelector } from "@/components/wallet/WalletSelector";
 export const RootHeader = () => {
   return (
     <header className="sticky top-0 z-50 glass-effect border-b">
-      <div className="container mx-auto px-6 py-4">
+      <div className="mx-auto px-6 py-4">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-8">
             <a href="/" className="group flex items-center gap-3">
@@ -19,9 +19,9 @@ export const RootHeader = () => {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gradient group-hover:scale-105 transition-transform">
-                  Aptos MessageBoard
+                  Aptos HyperPerp
                 </h1>
-                <p className="text-xs text-muted-foreground">Full Stack Demo</p>
+                <p className="text-xs text-muted-foreground">Demo</p>
               </div>
             </a>
             
@@ -30,13 +30,7 @@ export const RootHeader = () => {
                 href="/"
                 className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors hover:scale-105 transform duration-200"
               >
-                Messages
-              </a>
-              <a
-                href="/analytics"
-                className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors hover:scale-105 transform duration-200"
-              >
-                Analytics
+                Futures
               </a>
             </nav>
           </div>

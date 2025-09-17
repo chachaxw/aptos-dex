@@ -22,14 +22,14 @@ module hyperperp::perp_engine {
         SettlementBatch { fills, oracle_ts, min_px, max_px, expiry }
     }
 
-    public fun apply_batch(admin: &signer, batch: SettlementBatch, events_addr: address) {
+    public fun apply_batch(_admin: &signer, batch: SettlementBatch, events_addr: address) {
         let now = batch.oracle_ts; // in MVP we trust provided ts; later use block timestamp
         assert!(now <= batch.expiry, errors::e_batch_expired());
 
-        let n = vector::length(&batch.fills);
+        let n = batch.fills.length();
         let i = 0;
         while (i < n) {
-            let f = *vector::borrow(&batch.fills, i);
+            let f = batch.fills[i];
             // price bound check (using batch bounds). Later: per-market bounds w/ oracle
             assert!(f.price_x >= batch.min_px && f.price_x <= batch.max_px, errors::e_price_out_of_bounds());
 
@@ -43,11 +43,11 @@ module hyperperp::perp_engine {
 
             // TODO: fees & funding accruals
             events::emit_fill(events_addr, events::new_fill_event(f.taker, f.maker, f.market_id, f.size, f.price_x, f.fee_bps));
-            i = i + 1;
+            i += 1;
         }
     }
 
-    fun apply_fill(owner: address, market_id: u64, size_delta: u128, px: u64, is_long: bool) {
+    fun apply_fill(owner: address, market_id: u64, _size_delta: u128, _px: u64, is_long: bool) {
         // MVP stub - in real implementation this would update actual position storage
         let _p = pos::borrow_mut(owner, market_id);
         // TODO: implement actual position updates with proper storage

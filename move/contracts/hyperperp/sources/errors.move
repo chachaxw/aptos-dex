@@ -1,14 +1,32 @@
 module hyperperp::errors {
     /// Reserve error codes for stable interfaces
     const E_NOT_INITIALIZED: u64 = 1;
+
+    /// Already initialized
     const E_ALREADY_INITIALIZED: u64 = 2;
+
+    /// Unauthorized
     const E_UNAUTHORIZED: u64 = 3;
+
+    /// Paused
     const E_PAUSED: u64 = 4;
+
+    /// Insufficient margin
     const E_INSUFFICIENT_MARGIN: u64 = 10;
+
+    /// Price out of bounds
     const E_PRICE_OUT_OF_BOUNDS: u64 = 11;
+
+    /// Oracle stale
     const E_ORACLE_STALE: u64 = 12;
+
+    /// Batch expired
     const E_BATCH_EXPIRED: u64 = 13;
+
+    /// Unknown market
     const E_UNKNOWN_MARKET: u64 = 20;
+
+    /// Position not found
     const E_POSITION_NOT_FOUND: u64 = 21;
 
     public fun abort_not_initialized() { abort E_NOT_INITIALIZED }
