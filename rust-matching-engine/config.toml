@@ -4,8 +4,8 @@ port = 8080
 
 [aptos]
 node_url = "https://fullnode.testnet.aptoslabs.com/v1"
-admin_address = "0xa11ce"
-admin_private_key = "0x123..."
+admin_address = "0x6d0ca3fd9e9561b9303c837a7dc60c02c1dc6f57f2bb7c8b0a5d2e0c685a041a"
+admin_private_key = "ed25519-priv-0x6646457c414ae6fcc955f4fa625d572b243ccc1ab5d844cfb298d48cef450661"
 contract_address = "0xc0ffee"
 chain_id = 2
 

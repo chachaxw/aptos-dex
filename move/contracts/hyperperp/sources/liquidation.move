@@ -1,5 +1,4 @@
 module hyperperp::liquidation {
-    use hyperperp::oracle_adapter as oracle;
     use hyperperp::positions as pos;
     use hyperperp::account as acct;
     use hyperperp::risk;

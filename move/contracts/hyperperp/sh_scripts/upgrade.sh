@@ -6,7 +6,7 @@ echo "##### Upgrade module #####"
 
 # Profile is the account you used to execute transaction
 # Run "aptos init" to create the profile, then get the profile name from .aptos/config.yaml
-PUBLISHER_PROFILE=testnet-profile-1
+PUBLISHER_PROFILE=hyperperp-testnet
 
 CONTRACT_ADDRESS=$(cat contract_address.txt)
 

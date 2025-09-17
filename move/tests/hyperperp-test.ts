@@ -7,10 +7,10 @@ import {
 
 let packageObjectAddress: string;
 
-describe("my first test", () => {
+describe("hyperperp test", () => {
   let signer;
 
-  it("publish the contract", async () => {
+  it("test the contract", async () => {
     const [signer1] = await getTestSigners();
     signer = signer1;
 

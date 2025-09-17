@@ -1,8 +1,6 @@
 module hyperperp::market_registry {
     use std::table;
-    use std::option;
     use std::signer;
-    use std::string;
     use hyperperp::errors; use hyperperp::gov;
 
     struct Market has store, drop, copy {
@@ -25,8 +23,8 @@ module hyperperp::market_registry {
         assert!(gov::is_admin(admin), errors::e_unauthorized());
         let m = Market { symbol, imr_bps, mmr_bps, lot_size: lot, tick_size: tick, max_leverage_x };
         let reg = borrow_global_mut<Markets>(signer::address_of(admin));
-        let id = reg.next_id; reg.next_id = id + 1; table::add(&mut reg.by_id, id, m); id
+        let id = reg.next_id; reg.next_id = id + 1; reg.by_id.add(id, m); id
     }
 
-    public fun get(admin_addr: address, id: u64): Market acquires Markets { *table::borrow(&borrow_global<Markets>(admin_addr).by_id, id) }
+    public fun get(admin_addr: address, id: u64): Market acquires Markets { *borrow_global<Markets>(admin_addr).by_id.borrow(id) }
 }

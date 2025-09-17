@@ -12,7 +12,7 @@ aptos move compile \
 
 # Profile is the account you used to execute transaction
 # Run "aptos init" to create the profile, then get the profile name from .aptos/config.yaml
-SENDER_PROFILE=testnet-profile-1
+SENDER_PROFILE=hyperperp-testnet
 
 # Run the script
 aptos move run-script \
