@@ -13,6 +13,7 @@ module hyperperp::e2e_tests {
     use hyperperp::perp_engine as engine;
     use hyperperp::positions as pos;
     use hyperperp::liquidation as liq;
+    use hyperperp::events;
 
     const MKT_BTC: u64 = 1;
 
@@ -21,6 +22,7 @@ module hyperperp::e2e_tests {
         // 1) bootstrap
         gov::init_admins(admin, vector<address>[ signer::address_of(admin) ]);
         vault::init_treasury(admin);
+        events::init_events(admin);  // Initialize event system
         oracle::init(admin, /*staleness_secs=*/ 60);
         acct::open(taker);
         acct::open(maker);
