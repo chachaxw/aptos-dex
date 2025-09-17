@@ -29,7 +29,7 @@ export const RootFooter = () => {
           <div className="flex items-center gap-4">
             <IndexerStatus />
             <div className="text-xs text-muted-foreground">
-              © 2025 Aptos MessageBoard
+              © 2025 Aptos HyperPerp
             </div>
           </div>
         </div>

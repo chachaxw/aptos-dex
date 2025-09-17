@@ -19,7 +19,7 @@ export const RootHeader = () => {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gradient group-hover:scale-105 transition-transform">
-                  Aptos MessageBoard
+                  Aptos HyperPerp
                 </h1>
                 <p className="text-xs text-muted-foreground">Full Stack Demo</p>
               </div>
@@ -30,13 +30,7 @@ export const RootHeader = () => {
                 href="/"
                 className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors hover:scale-105 transform duration-200"
               >
-                Messages
-              </a>
-              <a
-                href="/analytics"
-                className="text-sm font-medium text-foreground/80 hover:text-primary transition-colors hover:scale-105 transform duration-200"
-              >
-                Analytics
+                Futures
               </a>
             </nav>
           </div>

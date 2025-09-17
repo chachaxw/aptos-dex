@@ -4,7 +4,10 @@ version = "0.1.0"
 upgrade_policy = "immutable"
 
 [addresses]
-hyperperp = "0xf088abc10dd7dbc83f95cd621fa85964a8f5d7efecf10272fb2cc6a909b8e647" # Deployer address
+hyperperp = "0xf088abc10dd7dbc83f95cd621fa85964a8f5d7efecf10272fb2cc6a909b8e647" # Will be set to object address during deployment
+admin = "0xf088abc10dd7dbc83f95cd621fa85964a8f5d7efecf10272fb2cc6a909b8e647" # Will be set during deployment
+user1 = "_"
+user2 = "_" 
 std = "0x1"
 aptos_framework = "0x1"
 aptos_std = "0x1"
