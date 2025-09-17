@@ -1,74 +1,71 @@
 use anyhow::{Context, Result};
-use aptos_sdk::{
-    crypto::{ed25519::Ed25519PrivateKey, PrivateKey, Uniform},
-    rest_client::{Client, FaucetClient, PendingTransaction},
-    transaction_builder::TransactionBuilder,
-    types::{
-        account_address::AccountAddress,
-        chain_id::ChainId,
-        transaction::{EntryFunction, TransactionPayload},
-        LocalAccount,
+use aptos_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
+use aptos_crypto::ValidCryptoMaterialStringExt;
+use aptos_rust_sdk::client::builder::AptosClientBuilder;
+use aptos_rust_sdk::client::config::AptosNetwork;
+use aptos_rust_sdk_types::api_types::{
+    address::AccountAddress,
+    chain_id::ChainId,
+    module_id::ModuleId,
+    transaction::{
+        EntryFunction, GenerateSigningMessage, RawTransaction, SignedTransaction, TransactionPayload,
     },
+    transaction_authenticator::TransactionAuthenticator,
 };
 use rust_decimal::Decimal;
 use std::str::FromStr;
-use tracing::{debug, error, info};
+use tracing::info;
 
 use crate::{
     config::AptosConfig,
-    models::{SettlementBatch, Trade},
+    models::SettlementBatch,
 };
 
+#[derive(Debug)]
 pub struct AptosClient {
-    client: Client,
-    admin_account: LocalAccount,
+    client: aptos_rust_sdk::client::rest_api::AptosFullnodeClient,
+    admin_private_key: Ed25519PrivateKey,
+    admin_address: AccountAddress,
     contract_address: AccountAddress,
     chain_id: ChainId,
 }
 
 impl AptosClient {
     pub async fn new(config: &AptosConfig) -> Result<Self> {
-        let client = Client::new(config.node_url.parse()?);
+        // Create client using the new SDK
+        let network = match config.chain_id {
+            1 => AptosNetwork::mainnet(),
+            2 => AptosNetwork::testnet(),
+            _ => AptosNetwork::testnet(), // Default to testnet
+        };
+        let client = AptosClientBuilder::new(network).build();
         
         // Load admin private key
         let private_key = Ed25519PrivateKey::from_encoded_string(&config.admin_private_key)
             .context("Failed to parse admin private key")?;
         
-        let admin_account = LocalAccount::new(
-            AccountAddress::from_str(&config.admin_address)?,
-            private_key,
-            0, // sequence number will be fetched
-        );
-
+        let admin_address = AccountAddress::from_str(&config.admin_address)?;
         let contract_address = AccountAddress::from_str(&config.contract_address)?;
-        let chain_id = ChainId::new(config.chain_id);
+        let chain_id = match config.chain_id {
+            1 => ChainId::Mainnet,
+            2 => ChainId::Testnet,
+            3 => ChainId::Testing,
+            id => ChainId::Other(id as u8),
+        };
 
-        let mut aptos_client = Self {
+        let aptos_client = Self {
             client,
-            admin_account,
+            admin_private_key: private_key,
+            admin_address,
             contract_address,
             chain_id,
         };
 
-        // Sync account sequence number
-        aptos_client.sync_admin_account().await?;
-        info!("Aptos client initialized for admin: {}", aptos_client.admin_account.address());
+        info!("Aptos client initialized for admin: {}", aptos_client.admin_address);
 
         Ok(aptos_client)
     }
 
-    async fn sync_admin_account(&mut self) -> Result<()> {
-        let account_response = self
-            .client
-            .get_account(self.admin_account.address())
-            .await?;
-
-        let sequence_number = account_response.inner().sequence_number;
-        *self.admin_account.sequence_number_mut() = sequence_number;
-        debug!("Synced admin account sequence number: {}", sequence_number);
-
-        Ok(())
-    }
 
     pub async fn submit_settlement_batch(
         &mut self,
@@ -76,118 +73,86 @@ impl AptosClient {
     ) -> Result<String> {
         info!("Submitting settlement batch: {} trades", batch.trades.len());
 
-        // Convert trades to BatchFill structs
-        let batch_fills = batch.trades.iter().map(|trade| {
-            self.trade_to_batch_fill(trade)
-        }).collect::<Result<Vec<_>>>()?;
+        // Get current state for sequence number and timestamp
+        let state = self.client.get_state().await?;
+        
+        // Get account resources to find sequence number
+        let resources = self.client.get_account_resources(self.admin_address.to_string()).await?;
+        let sequence_number = resources.into_inner()
+            .iter()
+            .find(|r| r.type_ == "0x1::account::Account")
+            .and_then(|r| r.data.get("sequence_number"))
+            .and_then(|v| v.as_str())
+            .and_then(|s| s.parse::<u64>().ok())
+            .unwrap_or(0);
 
-        // Create settlement batch payload
-        let settlement_batch = self.create_settlement_batch_payload(
-            batch_fills,
-            batch.oracle_timestamp,
-            batch.min_price,
-            batch.max_price,
-            batch.expiry_timestamp,
-        );
-
-        // Create transaction
+        // Create transaction payload
         let payload = TransactionPayload::EntryFunction(EntryFunction::new(
-            self.contract_address.into(),
-            "perp_engine".parse()?,
-            "apply_batch".parse()?,
+            ModuleId::new(self.contract_address, "perp_engine".to_string()),
+            "apply_batch".to_string(),
             vec![], // no type arguments
             vec![
-                bcs::to_bytes(&settlement_batch)?,
-                bcs::to_bytes(&self.admin_account.address())?, // events_addr
+                bcs::to_bytes(&self.create_settlement_batch_data(batch))?,
+                bcs::to_bytes(&self.admin_address)?, // events_addr
             ],
         ));
 
-        let transaction = TransactionBuilder::new(payload)
-            .sender(self.admin_account.address())
-            .sequence_number(self.admin_account.sequence_number())
-            .max_gas_amount(100_000)
-            .gas_unit_price(100)
-            .expiration_timestamp_secs(
-                std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)?
-                    .as_secs() + 30
-            )
-            .chain_id(self.chain_id)
-            .build();
+        // Create raw transaction
+        let raw_txn = RawTransaction::new(
+            self.admin_address,
+            sequence_number,
+            payload,
+            100_000, // max_gas_amount
+            100,     // gas_unit_price
+            state.timestamp_usecs / 1000 / 1000 + 30, // expiration_timestamp_secs
+            self.chain_id,
+        );
 
-        // Sign and submit transaction
-        let signed_txn = self.admin_account.sign_with_transaction_builder(transaction);
-        let pending_txn = self.client.submit(&signed_txn).await?;
+        // Sign transaction
+        let message = raw_txn.generate_signing_message()?;
+        let signature = self.admin_private_key.sign_message(&message);
+        
+        // Create signed transaction
+        let signed_txn = SignedTransaction::new(
+            raw_txn,
+            TransactionAuthenticator::ed25519(
+                Ed25519PublicKey::from(&self.admin_private_key),
+                signature,
+            ),
+        );
 
-        let txn_hash = pending_txn.hash.to_string();
+        // Submit transaction
+        let result = self.client.submit_transaction(signed_txn).await?;
+        let response_data = result.into_inner();
+        
+        // Extract hash from the response JSON
+        let txn_hash = response_data
+            .get("hash")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown")
+            .to_string();
+        
         info!("Settlement transaction submitted: {}", txn_hash);
-
-        // Wait for transaction confirmation
-        match self.wait_for_transaction(&pending_txn).await {
-            Ok(_) => {
-                info!("Settlement transaction confirmed: {}", txn_hash);
-                Ok(txn_hash)
-            }
-            Err(e) => {
-                error!("Settlement transaction failed: {} - {}", txn_hash, e);
-                Err(e)
-            }
-        }
+        Ok(txn_hash)
     }
 
-    async fn wait_for_transaction(&self, pending_txn: &PendingTransaction) -> Result<()> {
-        let start_time = std::time::Instant::now();
-        const TIMEOUT_SECS: u64 = 30;
-
-        loop {
-            if start_time.elapsed().as_secs() > TIMEOUT_SECS {
-                return Err(anyhow::anyhow!("Transaction confirmation timeout"));
-            }
-
-            match self.client.wait_for_transaction(pending_txn).await {
-                Ok(response) => {
-                    if response.inner().success {
-                        return Ok(());
-                    } else {
-                        return Err(anyhow::anyhow!(
-                            "Transaction failed: {:?}", 
-                            response.inner().vm_status
-                        ));
-                    }
-                }
-                Err(_) => {
-                    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-                }
-            }
-        }
-    }
-
-    fn trade_to_batch_fill(&self, trade: &Trade) -> Result<BatchFillData> {
-        Ok(BatchFillData {
-            taker: AccountAddress::from_str(&trade.taker_address)?,
-            maker: AccountAddress::from_str(&trade.maker_address)?,
-            market_id: trade.market_id,
-            size: self.decimal_to_u128(trade.size)?,
-            price_x: self.decimal_to_u128(trade.price * Decimal::from(100_000_000))?, // Convert to 1e8 scale
-            fee_bps: 10, // 0.1% fee
-            ts: trade.created_at.timestamp() as u64,
-        })
-    }
-
-    fn create_settlement_batch_payload(
-        &self,
-        fills: Vec<BatchFillData>,
-        oracle_ts: u64,
-        min_price: Decimal,
-        max_price: Decimal,
-        expiry: u64,
-    ) -> SettlementBatchData {
+    fn create_settlement_batch_data(&self, batch: &SettlementBatch) -> SettlementBatchData {
         SettlementBatchData {
-            fills,
-            oracle_ts,
-            min_px: self.decimal_to_u128(min_price * Decimal::from(100_000_000)).unwrap_or(0),
-            max_px: self.decimal_to_u128(max_price * Decimal::from(100_000_000)).unwrap_or(u128::MAX),
-            expiry,
+            fills: batch.trades.iter().map(|trade| {
+                BatchFillData {
+                    taker: AccountAddress::from_str(&trade.taker_address).unwrap_or(AccountAddress::ZERO),
+                    maker: AccountAddress::from_str(&trade.maker_address).unwrap_or(AccountAddress::ZERO),
+                    market_id: trade.market_id,
+                    size: self.decimal_to_u128(trade.size).unwrap_or(0),
+                    price_x: self.decimal_to_u128(trade.price * Decimal::from(100_000_000)).unwrap_or(0),
+                    fee_bps: 10, // 0.1% fee
+                    ts: trade.created_at.timestamp() as u64,
+                }
+            }).collect(),
+            oracle_ts: batch.oracle_timestamp,
+            min_px: self.decimal_to_u128(batch.min_price * Decimal::from(100_000_000)).unwrap_or(0),
+            max_px: self.decimal_to_u128(batch.max_price * Decimal::from(100_000_000)).unwrap_or(u128::MAX),
+            expiry: batch.expiry_timestamp,
         }
     }
 
@@ -199,18 +164,16 @@ impl AptosClient {
     }
 
     pub async fn get_account_balance(&self, address: &str) -> Result<u64> {
-        let account = AccountAddress::from_str(address)?;
-        let resource = self
-            .client
-            .get_account_resource(account, "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>")
-            .await?;
-
-        // Parse balance from resource data
-        if let Some(data) = resource.inner().data.as_object() {
-            if let Some(coin) = data.get("coin") {
-                if let Some(value) = coin.get("value") {
-                    if let Some(balance_str) = value.as_str() {
-                        return balance_str.parse().context("Failed to parse balance");
+        let resources = self.client.get_account_resources(address.to_string()).await?;
+        
+        // Find the coin store resource
+        for resource in resources.into_inner() {
+            if resource.type_ == "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>" {
+                if let Some(coin) = resource.data.get("coin") {
+                    if let Some(value) = coin.get("value") {
+                        if let Some(balance_str) = value.as_str() {
+                            return balance_str.parse().context("Failed to parse balance");
+                        }
                     }
                 }
             }
@@ -220,7 +183,7 @@ impl AptosClient {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 struct BatchFillData {
     taker: AccountAddress,
     maker: AccountAddress,
@@ -231,7 +194,7 @@ struct BatchFillData {
     ts: u64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 struct SettlementBatchData {
     fills: Vec<BatchFillData>,
     oracle_ts: u64,

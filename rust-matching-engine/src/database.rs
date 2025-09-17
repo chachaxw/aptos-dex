@@ -1,4 +1,5 @@
 use anyhow::Result;
+use rust_decimal::Decimal;
 use sqlx::{postgres::PgPoolOptions, PgPool, Row};
 use std::time::Duration;
 use tracing::{debug, info};
@@ -11,6 +12,15 @@ pub struct Database {
 }
 
 impl Database {
+    // Conversion functions between Decimal and String
+    fn decimal_to_string(decimal: &Decimal) -> String {
+        decimal.to_string()
+    }
+
+    fn string_to_decimal(s: &str) -> Decimal {
+        s.parse().unwrap_or_default()
+    }
+
     pub async fn new(database_url: &str) -> Result<Self> {
         let pool = PgPoolOptions::new()
             .max_connections(20)
@@ -132,9 +142,9 @@ impl Database {
         .bind(order.market_id as i64)
         .bind(&order.side)
         .bind(&order.order_type)
-        .bind(order.size)
-        .bind(order.price)
-        .bind(order.filled_size)
+        .bind(Self::decimal_to_string(&order.size))
+        .bind(order.price.map(|p| Self::decimal_to_string(&p)))
+        .bind(Self::decimal_to_string(&order.filled_size))
         .bind(&order.status)
         .bind(order.created_at)
         .bind(order.updated_at)
@@ -154,7 +164,7 @@ impl Database {
             WHERE id = $4
             "#,
         )
-        .bind(order.filled_size)
+        .bind(Self::decimal_to_string(&order.filled_size))
         .bind(&order.status)
         .bind(chrono::Utc::now())
         .bind(order.id)
@@ -200,9 +210,9 @@ impl Database {
             market_id: row.get::<i64, _>("market_id") as u64,
             side: row.get("side"),
             order_type: row.get("order_type"),
-            size: row.get("size"),
-            price: row.get("price"),
-            filled_size: row.get("filled_size"),
+            size: Self::string_to_decimal(&row.get::<String, _>("size")),
+            price: row.get::<Option<String>, _>("price").map(|p| Self::string_to_decimal(&p)),
+            filled_size: Self::string_to_decimal(&row.get::<String, _>("filled_size")),
             status: row.get("status"),
             created_at: row.get("created_at"),
             updated_at: row.get("updated_at"),
@@ -228,8 +238,8 @@ impl Database {
         .bind(trade.maker_order_id)
         .bind(&trade.taker_address)
         .bind(&trade.maker_address)
-        .bind(trade.size)
-        .bind(trade.price)
+        .bind(Self::decimal_to_string(&trade.size))
+        .bind(Self::decimal_to_string(&trade.price))
         .bind(&trade.side)
         .bind(trade.created_at)
         .bind(trade.settlement_batch_id)
@@ -261,8 +271,8 @@ impl Database {
             maker_order_id: row.get("maker_order_id"),
             taker_address: row.get("taker_address"),
             maker_address: row.get("maker_address"),
-            size: row.get("size"),
-            price: row.get("price"),
+            size: Self::string_to_decimal(&row.get::<String, _>("size")),
+            price: Self::string_to_decimal(&row.get::<String, _>("price")),
             side: row.get("side"),
             created_at: row.get("created_at"),
             settlement_batch_id: row.get("settlement_batch_id"),
@@ -282,8 +292,8 @@ impl Database {
         )
         .bind(batch.id)
         .bind(batch.oracle_timestamp as i64)
-        .bind(batch.min_price)
-        .bind(batch.max_price)
+        .bind(Self::decimal_to_string(&batch.min_price))
+        .bind(Self::decimal_to_string(&batch.max_price))
         .bind(batch.expiry_timestamp as i64)
         .bind(&batch.status)
         .bind(&batch.transaction_hash)

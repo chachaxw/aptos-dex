@@ -40,7 +40,7 @@ pub struct AppState {
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize tracing
-    tracing_subscriber::init();
+    tracing_subscriber::fmt::init();
     
     // Load configuration
     let config = Config::new()?;

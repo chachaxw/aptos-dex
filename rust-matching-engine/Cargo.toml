@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 aptos-rust-sdk = {git = "https://github.com/aptos-labs/aptos-rust-sdk", package = "aptos-rust-sdk"}
 aptos-rust-sdk-types = {git = "https://github.com/aptos-labs/aptos-rust-sdk", package = "aptos-rust-sdk-types"}
+aptos-crypto = {git = "https://github.com/aptos-labs/aptos-rust-sdk", package = "aptos-crypto"}
 #aptos-sdk = { git = "https://github.com/aptos-labs/aptos-core", branch = "devnet" }
 
 #aptos-indexer-processor-sdk = { git = "https://github.com/aptos-labs/aptos-indexer-processor-sdk.git", rev = "ca658a0881c4bff4e1dee14c59a7c63608a5b315" }
@@ -58,3 +59,6 @@ futures = "0.3.30"
 
 # HTTP client for Aptos
 reqwest = { version = "0.12.4", features = ["json"] }
+
+# BCS serialization
+bcs = "0.1.4"

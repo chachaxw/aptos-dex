@@ -62,12 +62,10 @@ impl MatchingEngine {
         // Save order to database
         self.database.insert_order(&order).await?;
 
-        let order_book = self.get_or_create_order_book(order.market_id);
-        
         // Try to match the order
         let trades = match order.order_type {
-            OrderType::Market => self.match_market_order(order_book, &mut order).await?,
-            OrderType::Limit => self.match_limit_order(order_book, &mut order).await?,
+            OrderType::Market => self.match_market_order(order.market_id, &mut order).await?,
+            OrderType::Limit => self.match_limit_order(order.market_id, &mut order).await?,
         };
 
         // Update order status
@@ -81,6 +79,7 @@ impl MatchingEngine {
 
         // Add remaining quantity to order book if not fully filled and it's a limit order
         if order.order_type == OrderType::Limit && order.status != OrderStatus::Filled {
+            let order_book = self.get_or_create_order_book(order.market_id);
             order_book.add_order(order);
         }
 
@@ -108,10 +107,11 @@ impl MatchingEngine {
     }
 
     async fn match_market_order(
-        &self,
-        order_book: &mut OrderBook,
+        &mut self,
+        market_id: u64,
         order: &mut Order,
     ) -> Result<Vec<Trade>> {
+        let order_book = self.get_or_create_order_book(market_id);
         let mut trades = Vec::new();
         let opposing_orders = match order.side {
             OrderSide::Buy => &mut order_book.asks,
@@ -148,19 +148,20 @@ impl MatchingEngine {
             remaining_size -= fill_size;
             total_cost += fill_size * fill_price;
 
-            // Save trade to database
-            self.database.insert_trade(&trade).await?;
             trades.push(trade);
 
             // Update maker order status
             if maker_order.filled_size >= maker_order.size {
                 maker_order.status = OrderStatus::Filled;
-                self.database.update_order(maker_order).await?;
                 opposing_orders.remove(0);
             } else {
                 maker_order.status = OrderStatus::PartiallyFilled;
-                self.database.update_order(maker_order).await?;
             }
+        }
+
+        // Save all trades to database
+        for trade in &trades {
+            self.database.insert_trade(trade).await?;
         }
 
         debug!("Market order matched {} trades, filled {}/{}", 
@@ -170,10 +171,11 @@ impl MatchingEngine {
     }
 
     async fn match_limit_order(
-        &self,
-        order_book: &mut OrderBook,
+        &mut self,
+        market_id: u64,
         order: &mut Order,
     ) -> Result<Vec<Trade>> {
+        let order_book = self.get_or_create_order_book(market_id);
         let mut trades = Vec::new();
         let order_price = order.price.unwrap(); // Limit orders always have price
 
@@ -223,20 +225,21 @@ impl MatchingEngine {
             maker_order.filled_size += fill_size;
             remaining_size -= fill_size;
 
-            // Save trade to database
-            self.database.insert_trade(&trade).await?;
             trades.push(trade);
 
             // Update maker order status
             if maker_order.filled_size >= maker_order.size {
                 maker_order.status = OrderStatus::Filled;
-                self.database.update_order(maker_order).await?;
                 opposing_orders.remove(i);
             } else {
                 maker_order.status = OrderStatus::PartiallyFilled;
-                self.database.update_order(maker_order).await?;
                 i += 1;
             }
+        }
+
+        // Save all trades to database
+        for trade in &trades {
+            self.database.insert_trade(trade).await?;
         }
 
         debug!("Limit order matched {} trades, filled {}/{}", 
@@ -289,8 +292,15 @@ impl OrderBook {
     }
 
     fn remove_order(&mut self, order_id: Uuid) -> bool {
-        let bid_removed = self.bids.retain(|o| o.id != order_id);
-        let ask_removed = self.asks.retain(|o| o.id != order_id);
+        let initial_bid_count = self.bids.len();
+        let initial_ask_count = self.asks.len();
+        
+        self.bids.retain(|o| o.id != order_id);
+        self.asks.retain(|o| o.id != order_id);
+        
+        let bid_removed = self.bids.len() < initial_bid_count;
+        let ask_removed = self.asks.len() < initial_ask_count;
+        
         bid_removed || ask_removed
     }
 

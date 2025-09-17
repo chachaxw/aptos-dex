@@ -10,7 +10,7 @@ use uuid::Uuid;
 
 use crate::{
     models::{
-        Order, OrderBook, OrderBookLevel, OrderResponse, OrderSide, OrderStatus, OrderType,
+        Order, OrderBook, OrderBookLevel, OrderResponse, OrderStatus, OrderType,
         SubmitOrderRequest,
     },
     SharedState,

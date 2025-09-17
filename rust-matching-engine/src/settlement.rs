@@ -1,4 +1,5 @@
 use anyhow::Result;
+use rust_decimal::prelude::FromPrimitive;
 use std::{sync::Arc, time::Duration};
 use tokio::time::{interval, timeout};
 use tracing::{debug, error, info, warn};
@@ -24,7 +25,7 @@ impl SettlementService {
         config: SettlementConfig,
     ) -> Result<Self> {
         Ok(Self {
-            aptos_client: Arc::new(tokio::sync::Mutex::new(aptos_client.as_ref().clone())),
+            aptos_client: Arc::new(tokio::sync::Mutex::new(Arc::try_unwrap(aptos_client).unwrap())),
             database,
             config,
         })
@@ -108,7 +109,7 @@ impl SettlementService {
         let min_price = prices.iter().min().unwrap().clone();
         let max_price = prices.iter().max().unwrap().clone();
         
-        let slippage = rust_decimal::Decimal::from_f64(self.config.max_price_slippage)
+        let slippage = FromPrimitive::from_f64(self.config.max_price_slippage)
             .unwrap_or(rust_decimal::Decimal::new(5, 2)); // 5%
         
         let price_range = max_price - min_price;
