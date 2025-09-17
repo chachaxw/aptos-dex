@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: hyperperp
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  matching-engine:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      HYPERPERP_DATABASE_URL: postgresql://postgres:password@postgres:5432/hyperperp
+      HYPERPERP_SERVER__HOST: 0.0.0.0
+      HYPERPERP_SERVER__PORT: 8080
+      HYPERPERP_APTOS__NODE_URL: https://fullnode.testnet.aptoslabs.com/v1
+      HYPERPERP_APTOS__ADMIN_ADDRESS: ${ADMIN_ADDRESS}
+      HYPERPERP_APTOS__ADMIN_PRIVATE_KEY: ${ADMIN_PRIVATE_KEY}
+      HYPERPERP_APTOS__CONTRACT_ADDRESS: ${CONTRACT_ADDRESS}
+      HYPERPERP_APTOS__CHAIN_ID: 2
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

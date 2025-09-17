@@ -1,0 +1,15 @@
+[server]
+host = "127.0.0.1"
+port = 8080
+
+[aptos]
+node_url = "https://fullnode.testnet.aptoslabs.com/v1"
+admin_address = "0xa11ce"
+admin_private_key = "0x123..."
+contract_address = "0xc0ffee"
+chain_id = 2
+
+[settlement]
+batch_size = 10
+batch_timeout_secs = 5
+max_price_slippage = 0.05

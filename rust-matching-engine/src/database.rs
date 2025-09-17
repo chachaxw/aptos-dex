@@ -1,0 +1,332 @@
+use anyhow::Result;
+use sqlx::{postgres::PgPoolOptions, PgPool, Row};
+use std::time::Duration;
+use tracing::{debug, info};
+use uuid::Uuid;
+
+use crate::models::{Order, SettlementBatch, Trade};
+
+pub struct Database {
+    pool: PgPool,
+}
+
+impl Database {
+    pub async fn new(database_url: &str) -> Result<Self> {
+        let pool = PgPoolOptions::new()
+            .max_connections(20)
+            .acquire_timeout(Duration::from_secs(30))
+            .connect(database_url)
+            .await?;
+
+        info!("Connected to PostgreSQL database");
+        
+        let db = Self { pool };
+        db.run_migrations().await?;
+        
+        Ok(db)
+    }
+
+    async fn run_migrations(&self) -> Result<()> {
+        info!("Running database migrations");
+        
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS orders (
+                id UUID PRIMARY KEY,
+                user_address TEXT NOT NULL,
+                market_id BIGINT NOT NULL,
+                side order_side NOT NULL,
+                order_type order_type NOT NULL,
+                size DECIMAL NOT NULL,
+                price DECIMAL,
+                filled_size DECIMAL NOT NULL DEFAULT 0,
+                status order_status NOT NULL DEFAULT 'pending',
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                expires_at TIMESTAMPTZ
+            );
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS trades (
+                id UUID PRIMARY KEY,
+                market_id BIGINT NOT NULL,
+                taker_order_id UUID NOT NULL,
+                maker_order_id UUID NOT NULL,
+                taker_address TEXT NOT NULL,
+                maker_address TEXT NOT NULL,
+                size DECIMAL NOT NULL,
+                price DECIMAL NOT NULL,
+                side order_side NOT NULL,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                settlement_batch_id UUID
+            );
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        sqlx::query(
+            r#"
+            CREATE TABLE IF NOT EXISTS settlement_batches (
+                id UUID PRIMARY KEY,
+                oracle_timestamp BIGINT NOT NULL,
+                min_price DECIMAL NOT NULL,
+                max_price DECIMAL NOT NULL,
+                expiry_timestamp BIGINT NOT NULL,
+                status settlement_status NOT NULL DEFAULT 'pending',
+                transaction_hash TEXT,
+                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+            "#,
+        )
+        .execute(&self.pool)
+        .await?;
+
+        // Create custom types
+        sqlx::query("CREATE TYPE IF NOT EXISTS order_side AS ENUM ('buy', 'sell');")
+            .execute(&self.pool)
+            .await?;
+            
+        sqlx::query("CREATE TYPE IF NOT EXISTS order_type AS ENUM ('market', 'limit');")
+            .execute(&self.pool)
+            .await?;
+            
+        sqlx::query("CREATE TYPE IF NOT EXISTS order_status AS ENUM ('pending', 'partiallyfilled', 'filled', 'cancelled', 'expired');")
+            .execute(&self.pool)
+            .await?;
+            
+        sqlx::query("CREATE TYPE IF NOT EXISTS settlement_status AS ENUM ('pending', 'submitted', 'confirmed', 'failed');")
+            .execute(&self.pool)
+            .await?;
+
+        // Create indexes
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_orders_market_status ON orders(market_id, status);")
+            .execute(&self.pool)
+            .await?;
+            
+        sqlx::query("CREATE INDEX IF NOT EXISTS idx_trades_settlement_batch ON trades(settlement_batch_id);")
+            .execute(&self.pool)
+            .await?;
+
+        debug!("Database migrations completed");
+        Ok(())
+    }
+
+    pub async fn insert_order(&self, order: &Order) -> Result<()> {
+        sqlx::query(
+            r#"
+            INSERT INTO orders (
+                id, user_address, market_id, side, order_type, 
+                size, price, filled_size, status, created_at, 
+                updated_at, expires_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            "#,
+        )
+        .bind(order.id)
+        .bind(&order.user_address)
+        .bind(order.market_id as i64)
+        .bind(&order.side)
+        .bind(&order.order_type)
+        .bind(order.size)
+        .bind(order.price)
+        .bind(order.filled_size)
+        .bind(&order.status)
+        .bind(order.created_at)
+        .bind(order.updated_at)
+        .bind(order.expires_at)
+        .execute(&self.pool)
+        .await?;
+
+        debug!("Inserted order: {}", order.id);
+        Ok(())
+    }
+
+    pub async fn update_order(&self, order: &Order) -> Result<()> {
+        sqlx::query(
+            r#"
+            UPDATE orders 
+            SET filled_size = $1, status = $2, updated_at = $3 
+            WHERE id = $4
+            "#,
+        )
+        .bind(order.filled_size)
+        .bind(&order.status)
+        .bind(chrono::Utc::now())
+        .bind(order.id)
+        .execute(&self.pool)
+        .await?;
+
+        debug!("Updated order: {}", order.id);
+        Ok(())
+    }
+
+    pub async fn cancel_order(&self, order_id: Uuid) -> Result<bool> {
+        let result = sqlx::query(
+            r#"
+            UPDATE orders 
+            SET status = 'cancelled', updated_at = NOW() 
+            WHERE id = $1 AND status IN ('pending', 'partiallyfilled')
+            "#,
+        )
+        .bind(order_id)
+        .execute(&self.pool)
+        .await?;
+
+        Ok(result.rows_affected() > 0)
+    }
+
+    pub async fn get_pending_orders(&self) -> Result<Vec<Order>> {
+        let rows = sqlx::query(
+            r#"
+            SELECT id, user_address, market_id, side, order_type, 
+                   size, price, filled_size, status, created_at, 
+                   updated_at, expires_at
+            FROM orders 
+            WHERE status IN ('pending', 'partiallyfilled')
+            ORDER BY created_at ASC
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let orders = rows.into_iter().map(|row| Order {
+            id: row.get("id"),
+            user_address: row.get("user_address"),
+            market_id: row.get::<i64, _>("market_id") as u64,
+            side: row.get("side"),
+            order_type: row.get("order_type"),
+            size: row.get("size"),
+            price: row.get("price"),
+            filled_size: row.get("filled_size"),
+            status: row.get("status"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+            expires_at: row.get("expires_at"),
+        }).collect();
+
+        Ok(orders)
+    }
+
+    pub async fn insert_trade(&self, trade: &Trade) -> Result<()> {
+        sqlx::query(
+            r#"
+            INSERT INTO trades (
+                id, market_id, taker_order_id, maker_order_id,
+                taker_address, maker_address, size, price, 
+                side, created_at, settlement_batch_id
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            "#,
+        )
+        .bind(trade.id)
+        .bind(trade.market_id as i64)
+        .bind(trade.taker_order_id)
+        .bind(trade.maker_order_id)
+        .bind(&trade.taker_address)
+        .bind(&trade.maker_address)
+        .bind(trade.size)
+        .bind(trade.price)
+        .bind(&trade.side)
+        .bind(trade.created_at)
+        .bind(trade.settlement_batch_id)
+        .execute(&self.pool)
+        .await?;
+
+        debug!("Inserted trade: {}", trade.id);
+        Ok(())
+    }
+
+    pub async fn get_pending_trades(&self) -> Result<Vec<Trade>> {
+        let rows = sqlx::query(
+            r#"
+            SELECT id, market_id, taker_order_id, maker_order_id,
+                   taker_address, maker_address, size, price,
+                   side, created_at, settlement_batch_id
+            FROM trades 
+            WHERE settlement_batch_id IS NULL
+            ORDER BY created_at ASC
+            "#,
+        )
+        .fetch_all(&self.pool)
+        .await?;
+
+        let trades = rows.into_iter().map(|row| Trade {
+            id: row.get("id"),
+            market_id: row.get::<i64, _>("market_id") as u64,
+            taker_order_id: row.get("taker_order_id"),
+            maker_order_id: row.get("maker_order_id"),
+            taker_address: row.get("taker_address"),
+            maker_address: row.get("maker_address"),
+            size: row.get("size"),
+            price: row.get("price"),
+            side: row.get("side"),
+            created_at: row.get("created_at"),
+            settlement_batch_id: row.get("settlement_batch_id"),
+        }).collect();
+
+        Ok(trades)
+    }
+
+    pub async fn insert_settlement_batch(&self, batch: &SettlementBatch) -> Result<()> {
+        sqlx::query(
+            r#"
+            INSERT INTO settlement_batches (
+                id, oracle_timestamp, min_price, max_price,
+                expiry_timestamp, status, transaction_hash, created_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            "#,
+        )
+        .bind(batch.id)
+        .bind(batch.oracle_timestamp as i64)
+        .bind(batch.min_price)
+        .bind(batch.max_price)
+        .bind(batch.expiry_timestamp as i64)
+        .bind(&batch.status)
+        .bind(&batch.transaction_hash)
+        .bind(batch.created_at)
+        .execute(&self.pool)
+        .await?;
+
+        debug!("Inserted settlement batch: {}", batch.id);
+        Ok(())
+    }
+
+    pub async fn update_settlement_batch(&self, batch: &SettlementBatch) -> Result<()> {
+        sqlx::query(
+            r#"
+            UPDATE settlement_batches 
+            SET status = $1, transaction_hash = $2
+            WHERE id = $3
+            "#,
+        )
+        .bind(&batch.status)
+        .bind(&batch.transaction_hash)
+        .bind(batch.id)
+        .execute(&self.pool)
+        .await?;
+
+        debug!("Updated settlement batch: {}", batch.id);
+        Ok(())
+    }
+
+    pub async fn update_trade_settlement_batch(&self, trade_id: Uuid, batch_id: Uuid) -> Result<()> {
+        sqlx::query(
+            r#"
+            UPDATE trades 
+            SET settlement_batch_id = $1 
+            WHERE id = $2
+            "#,
+        )
+        .bind(batch_id)
+        .bind(trade_id)
+        .execute(&self.pool)
+        .await?;
+
+        debug!("Updated trade {} with settlement batch {}", trade_id, batch_id);
+        Ok(())
+    }
+}
