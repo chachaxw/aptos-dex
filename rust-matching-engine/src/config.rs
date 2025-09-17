@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 pub struct Config {
     pub server: ServerConfig,
     pub database_url: String,
+    pub redis: RedisConfig,
     pub aptos: AptosConfig,
     pub settlement: SettlementConfig,
 }
@@ -13,6 +14,11 @@ pub struct Config {
 pub struct ServerConfig {
     pub host: String,
     pub port: u16,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RedisConfig {
+    pub url: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -39,6 +45,9 @@ impl Default for Config {
                 port: 8080,
             },
             database_url: "postgresql://postgres:password@localhost/hyperperp".to_string(),
+            redis: RedisConfig {
+                url: "redis://127.0.0.1:6379".to_string(),
+            },
             aptos: AptosConfig {
                 node_url: "https://fullnode.testnet.aptoslabs.com/v1".to_string(),
                 admin_address: "0xa11ce".to_string(),

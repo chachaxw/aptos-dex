@@ -5,6 +5,7 @@ mod api;
 mod aptos_client;
 mod database;
 mod settlement;
+mod redis_client;
 
 use anyhow::Result;
 use axum::{
@@ -26,12 +27,14 @@ use crate::{
     database::Database,
     aptos_client::AptosClient,
     settlement::SettlementService,
+    redis_client::RedisClient,
 };
 pub type SharedState = Arc<AppState>;
 
 pub struct AppState {
     pub matching_engine: Arc<RwLock<MatchingEngine>>,
     pub database: Arc<Database>,
+    pub redis_client: Arc<RwLock<RedisClient>>,
     pub aptos_client: Arc<AptosClient>,
     pub settlement_service: Arc<SettlementService>,
     pub config: Config,
@@ -50,13 +53,17 @@ async fn main() -> Result<()> {
     let database = Arc::new(Database::new(&config.database_url).await?);
     info!("Connected to database");
 
+    // Initialize Redis client
+    let redis_client = Arc::new(RwLock::new(RedisClient::new(&config.redis.url).await?));
+    info!("Connected to Redis");
+
     // Initialize Aptos client
     let aptos_client = Arc::new(AptosClient::new(&config.aptos).await?);
     info!("Connected to Aptos node");
 
     // Initialize matching engine
     let matching_engine = Arc::new(RwLock::new(
-        MatchingEngine::new(database.clone()).await?
+        MatchingEngine::new(database.clone(), redis_client.clone()).await?
     ));
     info!("Matching engine initialized");
 
@@ -74,6 +81,7 @@ async fn main() -> Result<()> {
     let state = Arc::new(AppState {
         matching_engine,
         database,
+        redis_client,
         aptos_client,
         settlement_service: settlement_service.clone(),
         config: config.clone(),

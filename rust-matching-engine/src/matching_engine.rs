@@ -7,12 +7,14 @@ use uuid::Uuid;
 
 use crate::{
     database::Database,
+    redis_client::RedisClient,
     models::{Order, OrderSide, OrderStatus, OrderType, Trade},
 };
 
 pub struct MatchingEngine {
     order_books: HashMap<u64, OrderBook>,
     database: Arc<Database>,
+    redis_client: Arc<tokio::sync::RwLock<RedisClient>>,
     trade_sender: broadcast::Sender<Trade>,
 }
 
@@ -23,12 +25,13 @@ pub struct OrderBook {
 }
 
 impl MatchingEngine {
-    pub async fn new(database: Arc<Database>) -> Result<Self> {
+    pub async fn new(database: Arc<Database>, redis_client: Arc<tokio::sync::RwLock<RedisClient>>) -> Result<Self> {
         let (trade_sender, _) = broadcast::channel(1000);
         
         let mut engine = Self {
             order_books: HashMap::new(),
             database,
+            redis_client,
             trade_sender,
         };
 
@@ -310,5 +313,64 @@ impl OrderBook {
 
     pub fn get_asks(&self) -> &[Order] {
         &self.asks
+    }
+}
+
+impl MatchingEngine {
+    // Redis persistence methods
+    async fn save_order_book_to_redis(&self, market_id: u64) -> Result<()> {
+        if let Some(order_book) = self.order_books.get(&market_id) {
+            let all_orders: Vec<Order> = order_book.bids.iter()
+                .chain(order_book.asks.iter())
+                .cloned()
+                .collect();
+            
+            let mut redis = self.redis_client.write().await;
+            redis.save_order_book(market_id, &all_orders).await?;
+        }
+        Ok(())
+    }
+
+    async fn load_order_book_from_redis(&mut self, market_id: u64) -> Result<()> {
+        let cached_orders = {
+            let mut redis = self.redis_client.write().await;
+            redis.load_order_book(market_id).await?
+        };
+        
+        if !cached_orders.is_empty() {
+            let order_book = self.get_or_create_order_book(market_id);
+            
+            // Clear existing orders
+            order_book.bids.clear();
+            order_book.asks.clear();
+            
+            // Load from cache
+            for order in cached_orders {
+                match order.side {
+                    OrderSide::Buy => order_book.bids.push(order),
+                    OrderSide::Sell => order_book.asks.push(order),
+                }
+            }
+            
+            // Sort orders
+            order_book.bids.sort_by(|a, b| b.price.unwrap_or_default().cmp(&a.price.unwrap_or_default()));
+            order_book.asks.sort_by(|a, b| a.price.unwrap_or_default().cmp(&b.price.unwrap_or_default()));
+            
+            debug!("Loaded {} orders from Redis cache for market {}", 
+                order_book.bids.len() + order_book.asks.len(), market_id);
+        }
+        Ok(())
+    }
+
+    async fn cache_order_to_redis(&self, order: &Order) -> Result<()> {
+        let mut redis = self.redis_client.write().await;
+        redis.cache_order(order).await?;
+        Ok(())
+    }
+
+    async fn remove_order_from_redis(&self, order_id: Uuid) -> Result<()> {
+        let mut redis = self.redis_client.write().await;
+        redis.remove_cached_order(order_id).await?;
+        Ok(())
     }
 }

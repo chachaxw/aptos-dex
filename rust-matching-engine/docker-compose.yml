@@ -12,12 +12,21 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
   matching-engine:
     build: .
     ports:
       - "8080:8080"
     environment:
       HYPERPERP_DATABASE_URL: postgresql://postgres:password@postgres:5432/hyperperp
+      HYPERPERP_REDIS_URL: redis://redis:6379
       HYPERPERP_SERVER__HOST: 0.0.0.0
       HYPERPERP_SERVER__PORT: 8080
       HYPERPERP_APTOS__NODE_URL: https://fullnode.testnet.aptoslabs.com/v1
@@ -27,7 +36,9 @@ services:
       HYPERPERP_APTOS__CHAIN_ID: 2
     depends_on:
       - postgres
+      - redis
     restart: unless-stopped
 
 volumes:
   postgres_data:
+  redis_data:
