@@ -73,7 +73,7 @@ Migrations run automatically on first startup.
 4. **Deploy Move Contracts**
 ```bash
 cd ../move/contracts/hyperperp
-aptos move publish --profile testnet
+aptos move publish --profile hyperperp-testnet
 ```
 
 5. **Start the Matching Engine**

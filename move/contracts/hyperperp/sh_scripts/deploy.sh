@@ -14,6 +14,7 @@ OUTPUT=$(aptos move create-object-and-publish-package \
   --address-name hyperperp_addr \
   --named-addresses hyperperp_addr=$PUBLISHER_ADDR \
   --profile $PUBLISHER_PROFILE \
+  --skip-fetch-latest-git-deps \
 	--assume-yes)
 
 # Extract the published contract address and save it to a file

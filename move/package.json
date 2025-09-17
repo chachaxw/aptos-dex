@@ -10,7 +10,7 @@
     "test:integration": "npx mocha tests/matching-engine-integration.ts --timeout 60000",
     "test:all": "npm run test:move && npm run test:comprehensive && npm run test:integration",
     "build": "cd contracts/hyperperp && aptos move compile",
-    "deploy:testnet": "cd contracts/hyperperp && aptos move publish --profile testnet",
+    "deploy:testnet": "cd contracts/hyperperp && aptos move publish --profile hyperperp-testnet",
     "clean": "cd contracts/hyperperp && rm -rf build"
   },
   "keywords": ["aptos", "move", "dex", "perpetual", "trading"],
