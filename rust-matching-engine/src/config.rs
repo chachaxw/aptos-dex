@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     pub server: ServerConfig,
-    pub database_url: String,
+    pub database: DatabaseConfig,
     pub redis: RedisConfig,
     pub aptos: AptosConfig,
     pub settlement: SettlementConfig,
@@ -14,6 +14,11 @@ pub struct Config {
 pub struct ServerConfig {
     pub host: String,
     pub port: u16,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DatabaseConfig {
+    pub url: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -44,7 +49,9 @@ impl Default for Config {
                 host: "127.0.0.1".to_string(),
                 port: 8080,
             },
-            database_url: "postgresql://postgres:password@localhost/hyperperp".to_string(),
+            database: DatabaseConfig {
+                url: "postgresql://postgres:password@localhost:5432/orderbook".to_string(),
+            },
             redis: RedisConfig {
                 url: "redis://127.0.0.1:6379".to_string(),
             },

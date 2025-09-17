@@ -50,7 +50,7 @@ async fn main() -> Result<()> {
     info!("Loaded configuration: {}", config.server.host);
 
     // Initialize database
-    let database = Arc::new(Database::new(&config.database_url).await?);
+    let database = Arc::new(Database::new(&config.database.url).await?);
     info!("Connected to database");
 
     // Initialize Redis client
