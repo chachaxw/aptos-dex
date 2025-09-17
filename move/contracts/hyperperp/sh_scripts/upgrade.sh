@@ -12,6 +12,6 @@ CONTRACT_ADDRESS=$(cat contract_address.txt)
 
 aptos move upgrade-object-package \
   --object-address $CONTRACT_ADDRESS \
-  --named-addresses message_board_addr=$CONTRACT_ADDRESS \
+  --named-addresses hyperperp_addr=$CONTRACT_ADDRESS \
   --profile $PUBLISHER_PROFILE \
   --assume-yes

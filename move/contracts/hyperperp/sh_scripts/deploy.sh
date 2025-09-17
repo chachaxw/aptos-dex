@@ -9,10 +9,10 @@ echo "##### Deploy module under a new object #####"
 PUBLISHER_PROFILE=testnet-profile-1
 
 PUBLISHER_ADDR=0x$(aptos config show-profiles --profile=$PUBLISHER_PROFILE | grep 'account' | sed -n 's/.*"account": \"\(.*\)\".*/\1/p')
-
+  
 OUTPUT=$(aptos move create-object-and-publish-package \
-  --address-name message_board_addr \
-  --named-addresses message_board_addr=$PUBLISHER_ADDR \
+  --address-name hyperperp_addr \
+  --named-addresses hyperperp_addr=$PUBLISHER_ADDR \
   --profile $PUBLISHER_PROFILE \
 	--assume-yes)
 

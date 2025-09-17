@@ -1,0 +1,25 @@
+[package]
+name = "hyperperp"
+version = "0.1.0"
+upgrade_policy = "immutable"
+
+[addresses]
+hyperperp = "0xC0FFEE" # publish address (update in deploy)
+admin = "_" # placeholder for named address
+user1 = "_" # placeholder for named address
+user2 = "_" # placeholder for named address
+std = "0x1"
+aptos_framework = "0x1"
+aptos_std = "0x1"
+
+[dependencies]
+AptosFramework = { git = "https://github.com/aptos-labs/aptos-core", subdir = "aptos-move/framework/aptos-framework", rev = "main" }
+AptosStdlib = { git = "https://github.com/aptos-labs/aptos-core", subdir = "aptos-move/framework/aptos-stdlib", rev = "main" }
+MoveStdlib = { git = "https://github.com/aptos-labs/aptos-core", subdir = "aptos-move/framework/move-stdlib", rev = "main" }
+
+[dev-addresses]
+admin = "0x6d0ca3fd9e9561b9303c837a7dc60c02c1dc6f57f2bb7c8b0a5d2e0c685a041a"
+user1 = "0xB0B"
+user2 = "0xCAFE"
+
+[dev-dependencies]
