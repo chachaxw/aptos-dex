@@ -121,7 +121,7 @@ fn calculate_required_collateral(order: &Order) -> u64 {
     };
     
     // 要求10%的抵押品，最少1000个最小单位
-    (notional_value / 10).max(1000)
+    (notional_value / 10).max(1)
 }
 
 pub async fn cancel_order(

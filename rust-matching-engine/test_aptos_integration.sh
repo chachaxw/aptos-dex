@@ -22,8 +22,8 @@ ORDER_RESPONSE=$(curl -X POST "http://127.0.0.1:8080/orders" \
   -d '{
     "user_address": "0x1234567890abcdef1234567890abcdef12345678",
     "market_id": 1,
-    "side": "buy",
-    "order_type": "limit",
+    "side": "Buy",
+    "order_type": "Limit",
     "size": "100.50",
     "price": "50000.00",
     "expires_at": "2024-12-31T23:59:59Z"
@@ -48,8 +48,8 @@ curl -X POST "http://127.0.0.1:8080/orders" \
   -d '{
     "user_address": "0x9876543210fedcba9876543210fedcba98765432",
     "market_id": 1,
-    "side": "sell",
-    "order_type": "market",
+    "side": "Sell",
+    "order_type": "Market",
     "size": "50.00"
   }' \
   -w "\nHTTP状态码: %{http_code}\n响应时间: %{time_total}s\n" \
