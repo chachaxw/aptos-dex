@@ -1,5 +1,7 @@
 # 🚀 HyperPerp Test Suite
 
+## Test Profiles
+
 ```
 profiles:
   hyperperp_publisher:
