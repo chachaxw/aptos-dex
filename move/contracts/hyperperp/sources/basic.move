@@ -13,6 +13,7 @@ module hyperperp::basic_tests {
         gov::init_admins(admin, vector<address>[ signer::address_of(admin) ]);
         vault::init<AptosCoin>(admin, admin, 1000000000000000000);
         acct::open(user);
+        
         // minimal compile test for apply_batch
         let b = engine::new_settlement_batch(vector<engine::BatchFill>[], 0, 1, 1_000_000_000, 10);
         engine::apply_batch(admin, b, signer::address_of(admin));

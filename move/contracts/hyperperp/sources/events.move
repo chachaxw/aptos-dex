@@ -8,17 +8,44 @@ module hyperperp::events {
         fill_events: event::EventHandle<FillEvent>,
         funding_events: event::EventHandle<FundingEvent>,
         liquidation_events: event::EventHandle<LiquidationEvent>,
+        position_update_events: event::EventHandle<PositionUpdateEvent>,
+        position_close_events: event::EventHandle<PositionCloseEvent>,
     }
 
-    public struct DepositEvent has copy, drop, store { user: address, amount: u64 }
-    public struct WithdrawEvent has copy, drop, store { user: address, amount: u64 }
+    /// Deposit event
+    public struct DepositEvent has copy, drop, store {
+        user: address, amount: u64
+    }
+
+    /// Withdraw event
+    public struct WithdrawEvent has copy, drop, store {
+        user: address, amount: u64
+    }
+
+    /// Fill event
     public struct FillEvent has copy, drop, store {
         taker: address, maker: address, market_id: u64, size: u128, price_x: u64, fee_bps: u64
     }
-    public struct FundingEvent has copy, drop, store { market_id: u64, delta: u128 }
-    public struct LiquidationEvent has copy, drop, store { user: address, market_id: u64, size_closed: u128, penalty: u64 }
-    public struct PositionUpdateEvent has copy, drop, store { user: address, market_id: u64, size: u128, is_long: bool, price: u64 }
-    public struct PositionCloseEvent has copy, drop, store { user: address, market_id: u64, size_closed: u128, close_price: u64, pnl: u128, is_profit: bool }
+
+    /// Funding event
+    public struct FundingEvent has copy, drop, store {
+        market_id: u64, rate: u64
+    }
+
+    /// Liquidation event
+    public struct LiquidationEvent has copy, drop, store {
+        user: address, market_id: u64, size_closed: u128, penalty: u64
+    }
+
+    /// Position update event
+    public struct PositionUpdateEvent has copy, drop, store {
+        user: address, market_id: u64, size: u128, is_long: bool, price: u64
+    }
+
+    /// Position close event
+    public struct PositionCloseEvent has copy, drop, store {
+        user: address, market_id: u64, size_closed: u128, close_price: u64, pnl: u128, is_profit: bool
+    }
 
     // Public constructor functions
     public fun new_deposit_event(user: address, amount: u64): DepositEvent {
@@ -45,6 +72,10 @@ module hyperperp::events {
         PositionCloseEvent { user, market_id, size_closed, close_price, pnl, is_profit }
     }
 
+    public fun new_funding_event(market_id: u64, rate: u64): FundingEvent {
+        FundingEvent { market_id, rate }
+    }
+
     public fun init_events(admin: &signer) {
         use aptos_framework::account;
         
@@ -54,6 +85,8 @@ module hyperperp::events {
             fill_events: account::new_event_handle<FillEvent>(admin),
             funding_events: account::new_event_handle<FundingEvent>(admin),
             liquidation_events: account::new_event_handle<LiquidationEvent>(admin),
+            position_update_events: account::new_event_handle<PositionUpdateEvent>(admin),
+            position_close_events: account::new_event_handle<PositionCloseEvent>(admin),
         });
     }
 
@@ -80,5 +113,15 @@ module hyperperp::events {
     public fun emit_liq(addr: address, e: LiquidationEvent) acquires EventStore {
         let store = borrow_global_mut<EventStore>(addr);
         event::emit_event(&mut store.liquidation_events, e)
+    }
+
+    public fun emit_position_update(addr: address, e: PositionUpdateEvent) acquires EventStore {
+        let store = borrow_global_mut<EventStore>(addr);
+        event::emit_event(&mut store.position_update_events, e)
+    }
+
+    public fun emit_position_close(addr: address, e: PositionCloseEvent) acquires EventStore {
+        let store = borrow_global_mut<EventStore>(addr);
+        event::emit_event(&mut store.position_close_events, e)
     }
 }

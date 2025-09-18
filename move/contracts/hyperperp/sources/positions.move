@@ -9,7 +9,8 @@ module hyperperp::positions {
     public struct Position has key, drop, store {
         owner: address,
         market_id: u64,
-        size: u128, // positive for long, negative for short (using u128 with sign logic)
+        size: u128, // absolute size
+        is_long: bool, // true for long, false for short
         entry_notional: u128,
         funding_acc: u128,
         last_updated: u64,
@@ -49,6 +50,7 @@ module hyperperp::positions {
                 owner,
                 market_id,
                 size: 0,
+                is_long: true, // default to long, will be updated when position is actually opened
                 entry_notional: 0,
                 funding_acc: 0,
                 last_updated: timestamp::now_microseconds(),
@@ -100,12 +102,8 @@ module hyperperp::positions {
 
     /// Update position size (handles long/short logic)
     public fun update_size(position: &mut Position, new_size: u128, is_long: bool) {
-        if (is_long) {
-            position.size = new_size;
-        } else {
-            // For short positions, we store the absolute value and use logic elsewhere
-            position.size = new_size;
-        };
+        position.size = new_size;
+        position.is_long = is_long;
         position.last_updated = timestamp::now_microseconds();
     }
 
@@ -123,14 +121,20 @@ module hyperperp::positions {
 
     /// Add to position size
     public fun add_size(position: &mut Position, size_delta: u128, is_long: bool) {
-        if (is_long) {
+        if (position.size == 0) {
+            // New position - set direction
+            position.size = size_delta;
+            position.is_long = is_long;
+        } else if (position.is_long == is_long) {
+            // Same direction - add to size
             position.size += size_delta;
         } else {
-            // For short positions, subtract (but we store absolute values)
+            // Opposite direction - reduce or flip position
             if (position.size >= size_delta) {
                 position.size -= size_delta;
             } else {
                 position.size = size_delta - position.size;
+                position.is_long = is_long; // Flip direction
             };
         };
         position.last_updated = timestamp::now_microseconds();
@@ -138,14 +142,12 @@ module hyperperp::positions {
 
     /// Check if position is long
     public fun is_long(position: &Position): bool {
-        // In this simplified implementation, we assume positive size = long
-        // In production, you'd have a separate field or use a different encoding
-        true // TODO: implement proper long/short detection
+        position.is_long
     }
 
     /// Check if position is short
     public fun is_short(position: &Position): bool {
-        !is_long(position)
+        !position.is_long
     }
 
     /// Check if position is empty (no size)
@@ -174,6 +176,7 @@ module hyperperp::positions {
     /// Close position (set size to 0)
     public fun close_position(position: &mut Position) {
         position.size = 0;
+        position.is_long = true; // Reset to default
         position.entry_notional = 0;
         position.funding_acc = 0;
         position.last_updated = timestamp::now_microseconds();
@@ -194,6 +197,8 @@ module hyperperp::positions {
     
     // Public getter functions
     public fun get_size(pos: &Position): u128 { pos.size }
+
+    public fun get_is_long(pos: &Position): bool { pos.is_long }
 
     public fun get_entry_notional(pos: &Position): u128 { pos.entry_notional }
 
