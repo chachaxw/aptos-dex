@@ -17,6 +17,8 @@ module hyperperp::events {
     }
     public struct FundingEvent has copy, drop, store { market_id: u64, delta: u128 }
     public struct LiquidationEvent has copy, drop, store { user: address, market_id: u64, size_closed: u128, penalty: u64 }
+    public struct PositionUpdateEvent has copy, drop, store { user: address, market_id: u64, size: u128, is_long: bool, price: u64 }
+    public struct PositionCloseEvent has copy, drop, store { user: address, market_id: u64, size_closed: u128, close_price: u64, pnl: u128, is_profit: bool }
 
     // Public constructor functions
     public fun new_deposit_event(user: address, amount: u64): DepositEvent {
@@ -33,6 +35,14 @@ module hyperperp::events {
     
     public fun new_liquidation_event(user: address, market_id: u64, size_closed: u128, penalty: u64): LiquidationEvent {
         LiquidationEvent { user, market_id, size_closed, penalty }
+    }
+    
+    public fun new_position_update_event(user: address, market_id: u64, size: u128, is_long: bool, price: u64): PositionUpdateEvent {
+        PositionUpdateEvent { user, market_id, size, is_long, price }
+    }
+    
+    public fun new_position_close_event(user: address, market_id: u64, size_closed: u128, close_price: u64, pnl: u128, is_profit: bool): PositionCloseEvent {
+        PositionCloseEvent { user, market_id, size_closed, close_price, pnl, is_profit }
     }
 
     public fun init_events(admin: &signer) {

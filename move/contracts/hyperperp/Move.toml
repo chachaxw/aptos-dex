@@ -4,7 +4,8 @@ version = "0.1.0"
 upgrade_policy = "arbitrary"
 
 [addresses]
-admin = "_" # Will be set during deployment
+hyperperp = "_" # Will be set during deployment
+admin = "_"
 user1 = "_"
 user2 = "_"
 std = "0x1"
@@ -17,6 +18,7 @@ AptosStdlib = { git = "https://github.com/aptos-labs/aptos-core", subdir = "apto
 MoveStdlib = { git = "https://github.com/aptos-labs/aptos-core", subdir = "aptos-move/framework/move-stdlib", rev = "main" }
 
 [dev-addresses]
+hyperperp = "0xac60e5c9354e06da4ae20734ba9ab63d5ecdb433f01e8f884495d06a3db2d975"
 admin = "0xf088abc10dd7dbc83f95cd621fa85964a8f5d7efecf10272fb2cc6a909b8e647"
 user1 = "0x6d0ca3fd9e9561b9303c837a7dc60c02c1dc6f57f2bb7c8b0a5d2e0c685a041a"
 user2 = "0x5708cd573dfc241fe0d640c5c7cfa34acf8a92a795115ea472dc5205381696f1"
