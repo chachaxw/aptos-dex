@@ -1,7 +1,7 @@
 [package]
 name = "hyperperp"
 version = "0.1.0"
-upgrade_policy = "immutable"
+upgrade_policy = "arbitrary"
 
 [addresses]
 admin = "_" # Will be set during deployment
