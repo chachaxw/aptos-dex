@@ -85,7 +85,7 @@ export function MarketSelector({
                       <TrendingDown className="w-3 h-3 text-red-600" />
                     )}
                     <span className={cn(
-                      "text-xs font-medium",
+                      "text-sm font-medium",
                       isPositive ? "text-green-600" : "text-red-600"
                     )}>
                       {isPositive ? '+' : ''}{data.change.toFixed(2)}%

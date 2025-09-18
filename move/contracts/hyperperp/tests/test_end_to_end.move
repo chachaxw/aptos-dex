@@ -14,6 +14,9 @@ module hyperperp::e2e_tests {
     use hyperperp::positions as pos;
     use hyperperp::liquidation as liq;
     use hyperperp::events;
+    #[test_only]
+    use aptos_framework::coin;
+    use aptos_framework::aptos_coin::AptosCoin;
 
     const MKT_BTC: u64 = 1;
 
@@ -21,7 +24,7 @@ module hyperperp::e2e_tests {
     public fun end_to_end(admin: &signer, taker: &signer, maker: &signer) {
         // 1) bootstrap
         gov::init_admins(admin, vector<address>[ signer::address_of(admin) ]);
-        vault::init_treasury(admin);
+        vault::init<coin::Coin<AptosCoin>>(admin, admin, 1000000000000000000);
         events::init_events(admin);  // Initialize event system
         oracle::init(admin, /*staleness_secs=*/ 60);
         acct::open(taker);
@@ -54,7 +57,7 @@ module hyperperp::e2e_tests {
 
         // 7) assert taker flat after liquidation
         // MVP stub - in real implementation would check actual position
-        let p_taker = pos::borrow_mut(taker_addr, MKT_BTC);
-        assert!(pos::get_size(&p_taker) == 0, 10003); // This will always pass in MVP stub
+        let size = pos::get_position_size(taker_addr, MKT_BTC);
+        assert!(size == 0, 10003); // This will always pass in MVP stub
     }
 }
