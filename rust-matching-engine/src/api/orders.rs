@@ -4,8 +4,9 @@ use axum::{
     response::Json,
 };
 use rust_decimal::Decimal;
+use rust_decimal::prelude::ToPrimitive;
 use std::str::FromStr;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 use uuid::Uuid;
 
 use crate::{
@@ -59,6 +60,45 @@ pub async fn submit_order(
         expires_at: req.expires_at,
     };
 
+    // ==================== 功能1: 下单时冻结资金 ====================
+    // 计算所需抵押品
+    let required_collateral = calculate_required_collateral(&order);
+    
+    // 验证用户抵押品
+    if !state.aptos_client.validate_collateral(&order.user_address, required_collateral).await
+        .map_err(|e| {
+            error!("Failed to validate collateral: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })? {
+        warn!("Insufficient collateral for user {}: required {}", order.user_address, required_collateral);
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    // 冻结用户资金
+    match state.aptos_client.freeze_user_funds(
+        &order.user_address,
+        required_collateral,
+        order.market_id,
+    ).await {
+        Ok(tx_hash) => {
+            info!("Funds frozen for user {}: tx {}", order.user_address, tx_hash);
+            
+            // 等待资金冻结确认
+            if !state.aptos_client.wait_for_transaction_confirmation(&tx_hash, 10).await
+                .map_err(|e| {
+                    error!("Failed to wait for freeze confirmation: {}", e);
+                    StatusCode::INTERNAL_SERVER_ERROR
+                })? {
+                warn!("Freeze transaction not confirmed for user {}", order.user_address);
+                return Err(StatusCode::INTERNAL_SERVER_ERROR);
+            }
+        }
+        Err(e) => {
+            error!("Failed to freeze funds for user {}: {}", order.user_address, e);
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    }
+
     // Submit order to matching engine
     match state.matching_engine.write().await.submit_order(order.clone()).await {
         Ok(trades) => {
@@ -72,6 +112,18 @@ pub async fn submit_order(
     }
 }
 
+/// 计算所需抵押品
+fn calculate_required_collateral(order: &Order) -> u64 {
+    // 简化的抵押品计算逻辑
+    let notional_value = match order.price {
+        Some(price) => (order.size * price).to_u64().unwrap_or(0),
+        None => order.size.to_u64().unwrap_or(0),
+    };
+    
+    // 要求10%的抵押品，最少1000个最小单位
+    (notional_value / 10).max(1000)
+}
+
 pub async fn cancel_order(
     State(state): State<SharedState>,
     Path(order_id): Path<String>,
@@ -79,14 +131,70 @@ pub async fn cancel_order(
     let order_uuid = Uuid::from_str(&order_id)
         .map_err(|_| StatusCode::BAD_REQUEST)?;
 
+    // 获取订单信息用于计算解冻金额
+    let order_info = state.database.get_order(order_uuid).await
+        .map_err(|e| {
+            error!("Failed to get order info: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    // 取消订单
     match state.matching_engine.write().await.cancel_order(order_uuid).await {
-        Ok(true) => Ok(StatusCode::OK),
+        Ok(true) => {
+            // ==================== 功能3: 撤单时解冻资金 ====================
+            // 计算需要解冻的资金
+            let unfrozen_amount = calculate_unfrozen_amount(&order_info);
+            
+            if unfrozen_amount > 0 {
+                // 解冻用户资金
+                match state.aptos_client.unfreeze_user_funds(
+                    &order_info.user_address,
+                    unfrozen_amount,
+                ).await {
+                    Ok(tx_hash) => {
+                        info!("Funds unfrozen for user {}: tx {}", order_info.user_address, tx_hash);
+                        
+                        // 等待资金解冻确认
+                        if !state.aptos_client.wait_for_transaction_confirmation(&tx_hash, 10).await
+                            .map_err(|e| {
+                                error!("Failed to wait for unfreeze confirmation: {}", e);
+                                StatusCode::INTERNAL_SERVER_ERROR
+                            })? {
+                            warn!("Unfreeze transaction not confirmed for user {}", order_info.user_address);
+                            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                        }
+                    }
+                    Err(e) => {
+                        error!("Failed to unfreeze funds for user {}: {}", order_info.user_address, e);
+                        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+                    }
+                }
+            }
+            
+            Ok(StatusCode::OK)
+        }
         Ok(false) => Err(StatusCode::NOT_FOUND),
         Err(e) => {
             error!("Failed to cancel order: {}", e);
             Err(StatusCode::INTERNAL_SERVER_ERROR)
         }
     }
+}
+
+/// 计算解冻金额
+fn calculate_unfrozen_amount(order: &Order) -> u64 {
+    let remaining_size = order.size - order.filled_size;
+    if remaining_size == Decimal::ZERO {
+        return 0;
+    }
+
+    let notional_value = match order.price {
+        Some(price) => (remaining_size * price).to_u64().unwrap_or(0),
+        None => remaining_size.to_u64().unwrap_or(0),
+    };
+    
+    // 解冻对应的抵押品
+    (notional_value / 10).max(1000)
 }
 
 pub async fn get_order_book(

@@ -348,4 +348,38 @@ impl Database {
         debug!("Updated trade {} with settlement batch {}", trade_id, batch_id);
         Ok(())
     }
+
+    pub async fn get_order(&self, order_id: Uuid) -> Result<Order> {
+        let row = sqlx::query(
+            r#"
+            SELECT id, user_address, market_id, side, order_type, 
+                   CAST(size AS TEXT) as size, CAST(price AS TEXT) as price, 
+                   CAST(filled_size AS TEXT) as filled_size, status, created_at, 
+                   updated_at, expires_at
+            FROM orders 
+            WHERE id = $1
+            "#,
+        )
+        .bind(order_id)
+        .fetch_one(&self.pool)
+        .await?;
+
+        let order = Order {
+            id: row.get("id"),
+            user_address: row.get("user_address"),
+            market_id: row.get::<i64, _>("market_id") as u64,
+            side: row.get("side"),
+            order_type: row.get("order_type"),
+            size: Self::string_to_decimal(row.get::<&str, _>("size")),
+            price: row.get::<Option<&str>, _>("price").map(|p| Self::string_to_decimal(p)),
+            filled_size: Self::string_to_decimal(row.get::<&str, _>("filled_size")),
+            status: row.get("status"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+            expires_at: row.get("expires_at"),
+        };
+
+        debug!("Retrieved order: {}", order.id);
+        Ok(order)
+    }
 }
