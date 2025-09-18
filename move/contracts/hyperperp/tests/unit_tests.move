@@ -6,7 +6,6 @@
 module hyperperp::gov_tests {
     use std::signer;
     use hyperperp::gov;
-    use hyperperp::errors;
 
     #[test(admin = @admin)]
     public fun test_init_admins(admin: &signer) {
@@ -105,7 +104,7 @@ module hyperperp::oracle_tests {
         oracle::push_price(admin, 1, 3000000000000, 10000000, 1704067200);
         
         // Read price (same timestamp should work)
-        let price = oracle::read_price(admin_addr, 1, 1704067200);
+        let _price = oracle::read_price(admin_addr, 1, 1704067200);
         // Price successfully read (oracle Price struct details are internal)
     }
 
@@ -138,9 +137,9 @@ module hyperperp::position_tests {
         // Check existence
         assert!(pos::exists_at(owner, market_id), 1);
         
-        // Borrow position
-        let position = pos::borrow_mut(owner, market_id);
-        assert!(pos::get_size(&position) == 0, 2);
+        // Get position size
+        let size = pos::get_position_size(owner, market_id);
+        assert!(size == 0, 2);
     }
 }
 
@@ -245,10 +244,13 @@ module hyperperp::vault_tests {
     use hyperperp::vault;
     use hyperperp::gov;
 
+    #[test_only]
+    use aptos_framework::aptos_coin::AptosCoin;
+
     #[test(admin = @admin)]
     public fun test_vault_init(admin: &signer) {
         gov::init_admins(admin, vector<address>[signer::address_of(admin)]);
-        vault::init_treasury(admin);
+        vault::init<AptosCoin>(admin, admin, 1000000000000000000);
         // If no abort, initialization worked
     }
 
@@ -285,7 +287,6 @@ module hyperperp::liquidation_tests {
 /// Tests for perp engine (batch processing)
 module hyperperp::engine_tests {
     use std::signer;
-    use std::vector;
     use hyperperp::perp_engine as engine;
     use hyperperp::events;
     use hyperperp::positions as pos;

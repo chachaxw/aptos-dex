@@ -8,21 +8,23 @@ module hyperperp::stress_tests {
     use std::vector;
     use hyperperp::gov;
     use hyperperp::vault;
-    use hyperperp::account as acct;
     use hyperperp::oracle_adapter as oracle;
     use hyperperp::perp_engine as engine;
     use hyperperp::positions as pos;
     use hyperperp::events;
+
+    #[test_only]
+    use aptos_framework::aptos_coin::AptosCoin;
 
     #[test(admin = @admin)]
     public fun test_large_batch_settlement(admin: &signer) {
         // Initialize system
         let admin_addr = signer::address_of(admin);
         gov::init_admins(admin, vector<address>[admin_addr]);
-        vault::init_treasury(admin);
+        vault::init<AptosCoin>(admin, admin, 1000000000000000000);
         events::init_events(admin);
         oracle::init(admin, 60);
-        
+            
         // Create large batch with many fills
         let fills = vector::empty<engine::BatchFill>();
         let i = 0;
@@ -43,8 +45,8 @@ module hyperperp::stress_tests {
                 1704067200 + (i as u64) // different timestamps
             );
             
-            vector::push_back(&mut fills, fill);
-            i = i + 1;
+            fills.push_back(fill);
+            i += 1;
         };
         
         let batch = engine::new_settlement_batch(
@@ -73,7 +75,7 @@ module hyperperp::stress_tests {
             let user_addr = @user1;
             pos::ensure(user_addr, market_id);
             assert!(pos::exists_at(user_addr, market_id), i);
-            i = i + 1;
+            i += 1;
         };
     }
 
@@ -94,7 +96,7 @@ module hyperperp::stress_tests {
                 10000000,
                 1704067200
             );
-            market_id = market_id + 1;
+            market_id += 1;
         };
     }
 
@@ -149,10 +151,10 @@ module hyperperp::stress_tests {
             oracle::push_price(admin, market_id, price, 10000000, timestamp + i);
             
             // Read the updated price
-            let price_data = oracle::read_price(admin_addr, market_id, timestamp + i);
+            let _price_data = oracle::read_price(admin_addr, market_id, timestamp + i);
             // Price data read successfully (oracle struct details are internal)
             
-            i = i + 1;
+            i += 1;
         };
     }
 
@@ -204,7 +206,7 @@ module hyperperp::stress_tests {
             let fill_event = events::new_fill_event(@user1, @user2, 1, 10, 30000, 10);
             events::emit_fill(admin_addr, fill_event);
             
-            i = i + 1;
+            i += 1;
         };
     }
 }
@@ -269,12 +271,12 @@ module hyperperp::edge_case_tests {
         engine::apply_batch(admin, batch, admin_addr);
     }
 
-    #[test(admin = @admin)]
-    public fun test_boundary_risk_calculations(admin: &signer) {
+    #[test]
+    public fun test_boundary_risk_calculations() {
         // Test risk calculations at boundaries
         
         // Exactly at maintenance margin
-        let is_healthy = risk::check_maintenance(4000, 1, 100000000); // Designed to be right at MMR
+        let _is_healthy = risk::check_maintenance(4000, 1, 100000000); // Designed to be right at MMR
         // Should be healthy or unhealthy based on exact MMR calculation
         
         // Zero collateral
@@ -322,14 +324,13 @@ module hyperperp::edge_case_tests {
 /// Performance benchmarking tests
 module hyperperp::benchmark_tests {
     use std::signer;
-    use std::vector;
     use hyperperp::gov;
     use hyperperp::events;
     use hyperperp::perp_engine as engine;
     use hyperperp::positions as pos;
 
-    #[test(admin = @admin)]
-    public fun benchmark_position_creation(admin: &signer) {
+    #[test]
+    public fun benchmark_position_creation() {
         // Benchmark creating many positions
         let market_id = 1;
         let i = 0;
@@ -338,7 +339,7 @@ module hyperperp::benchmark_tests {
         while (i < max_users) {
             let user_addr = @user1;
             pos::ensure(user_addr, market_id);
-            i = i + 1;
+            i += 1;
         };
         
         // Verify all positions exist
@@ -346,7 +347,7 @@ module hyperperp::benchmark_tests {
         while (j < max_users) {
             let user_addr = @user1;
             assert!(pos::exists_at(user_addr, market_id), j);
-            j = j + 1;
+            j += 1;
         };
     }
 
@@ -382,7 +383,7 @@ module hyperperp::benchmark_tests {
             );
             
             engine::apply_batch(admin, batch, admin_addr);
-            batch_count = batch_count + 1;
+            batch_count += 1;
         };
     }
 }
