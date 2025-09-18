@@ -142,7 +142,7 @@ impl Database {
                 id, user_address, market_id, side, order_type, 
                 size, price, filled_size, status, created_at, 
                 updated_at, expires_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            ) VALUES ($1, $2, $3, $4, $5, CAST($6 AS numeric), CAST($7 AS numeric), CAST($8 AS numeric), $9, $10, $11, $12)
             "#,
         )
         .bind(order.id)
@@ -168,7 +168,7 @@ impl Database {
         sqlx::query(
             r#"
             UPDATE orders 
-            SET filled_size = $1, status = $2, updated_at = $3 
+            SET filled_size = CAST($1 AS numeric), status = $2, updated_at = $3 
             WHERE id = $4
             "#,
         )
@@ -237,7 +237,7 @@ impl Database {
                 id, market_id, taker_order_id, maker_order_id,
                 taker_address, maker_address, size, price, 
                 side, created_at, settlement_batch_id
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            ) VALUES ($1, $2, $3, $4, $5, $6, CAST($7 AS numeric), CAST($8 AS numeric), $9, $10, $11)
             "#,
         )
         .bind(trade.id)
@@ -295,7 +295,7 @@ impl Database {
             INSERT INTO settlement_batches (
                 id, oracle_timestamp, min_price, max_price,
                 expiry_timestamp, status, transaction_hash, created_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            ) VALUES ($1, $2, CAST($3 AS numeric), CAST($4 AS numeric), $5, $6, $7, $8)
             "#,
         )
         .bind(batch.id)

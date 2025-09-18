@@ -1,6 +1,5 @@
 use anyhow::{Context, Result};
 use aptos_crypto::ed25519::{Ed25519PrivateKey, Ed25519PublicKey};
-use aptos_crypto::ValidCryptoMaterialStringExt;
 use aptos_rust_sdk::client::builder::AptosClientBuilder;
 use hex;
 use aptos_rust_sdk::client::config::AptosNetwork;

@@ -25,7 +25,7 @@ impl RedisClient {
         let serialized = serde_json::to_string(orders)?;
         
         self.connection_manager
-            .set_ex(&key, serialized, 3600) // 1 hour TTL
+            .set_ex::<_, _, ()>(&key, serialized, 3600) // 1 hour TTL
             .await?;
             
         debug!("Saved order book for market {} with {} orders", market_id, orders.len());
@@ -55,7 +55,7 @@ impl RedisClient {
         let serialized = serde_json::to_string(order)?;
         
         self.connection_manager
-            .set_ex(&key, serialized, 86400) // 24 hours TTL
+            .set_ex::<_, _, ()>(&key, serialized, 86400) // 24 hours TTL
             .await?;
             
         debug!("Cached order: {}", order.id);
@@ -77,7 +77,7 @@ impl RedisClient {
 
     pub async fn remove_cached_order(&mut self, order_id: Uuid) -> Result<()> {
         let key = format!("order:{}", order_id);
-        self.connection_manager.del(&key).await?;
+        self.connection_manager.del::<_, ()>(&key).await?;
         debug!("Removed cached order: {}", order_id);
         Ok(())
     }
@@ -88,7 +88,7 @@ impl RedisClient {
         let serialized = serde_json::to_string(stats)?;
         
         self.connection_manager
-            .set_ex(&key, serialized, 300) // 5 minutes TTL
+            .set_ex::<_, _, ()>(&key, serialized, 300) // 5 minutes TTL
             .await?;
             
         debug!("Updated market stats for market {}", market_id);
@@ -114,7 +114,7 @@ impl RedisClient {
         let serialized = serde_json::to_string(trades)?;
         
         self.connection_manager
-            .set_ex(&key, serialized, 3600) // 1 hour TTL
+            .set_ex::<_, _, ()>(&key, serialized, 3600) // 1 hour TTL
             .await?;
             
         debug!("Cached {} recent trades for market {}", trades.len(), market_id);
@@ -137,9 +137,9 @@ impl RedisClient {
     // Health Check
     pub async fn ping(&mut self) -> Result<String> {
         // Simple health check by setting and getting a test key
-        self.connection_manager.set("health_check", "pong").await?;
+        self.connection_manager.set::<_, _, ()>("health_check", "pong").await?;
         let result: String = self.connection_manager.get("health_check").await?;
-        self.connection_manager.del("health_check").await?;
+        self.connection_manager.del::<_, ()>("health_check").await?;
         Ok(result)
     }
 
@@ -147,22 +147,22 @@ impl RedisClient {
     pub async fn clear_all_cache(&mut self) -> Result<()> {
         let keys: Vec<String> = self.connection_manager.keys("orderbook:*").await?;
         if !keys.is_empty() {
-            self.connection_manager.del(keys).await?;
+            self.connection_manager.del::<_, ()>(keys).await?;
         }
         
         let keys: Vec<String> = self.connection_manager.keys("order:*").await?;
         if !keys.is_empty() {
-            self.connection_manager.del(keys).await?;
+            self.connection_manager.del::<_, ()>(keys).await?;
         }
         
         let keys: Vec<String> = self.connection_manager.keys("market_stats:*").await?;
         if !keys.is_empty() {
-            self.connection_manager.del(keys).await?;
+            self.connection_manager.del::<_, ()>(keys).await?;
         }
         
         let keys: Vec<String> = self.connection_manager.keys("recent_trades:*").await?;
         if !keys.is_empty() {
-            self.connection_manager.del(keys).await?;
+            self.connection_manager.del::<_, ()>(keys).await?;
         }
         
         info!("Cleared all cache");
