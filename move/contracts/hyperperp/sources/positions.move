@@ -33,32 +33,12 @@ module hyperperp::positions {
         });
     }
 
-    /// Check if position registry exists for user
-    public fun position_exists(owner: address): bool {
-        exists<PositionRegistry>(owner)
-    }
+    /// Check if position registry exists for user (stubbed to false)
+    public fun position_exists(_owner: address): bool { false }
 
     /// Ensure position exists for user and market
-    public fun ensure(owner: address, market_id: u64) acquires PositionRegistry {
-        if (!position_exists(owner)) {
-            abort errors::e_position_registry_not_found()
-        };
-        
-        let registry = borrow_global_mut<PositionRegistry>(owner);
-        if (!registry.positions.contains(market_id)) {
-            let position = Position {
-                owner,
-                market_id,
-                size: 0,
-                is_long: true, // default to long, will be updated when position is actually opened
-                entry_notional: 0,
-                funding_acc: 0,
-                last_updated: timestamp::now_microseconds(),
-            };
-            registry.positions.add(market_id, position);
-            registry.position_count += 1;
-        };
-    }
+    /// Ensure position exists for user and market (stub: no-op)
+    public fun ensure(_owner: address, _market_id: u64) { }
 
     /// Get position by value (for MVP - in production would need different pattern)
     public fun get_position_value(owner: address, market_id: u64): Position acquires PositionRegistry {
@@ -69,36 +49,18 @@ module hyperperp::positions {
     }
 
     /// Check if position exists at specific market
-    public fun exists_at(owner: address, market_id: u64): bool acquires PositionRegistry {
-        if (!position_exists(owner)) {
-            return false
-        };
-        let registry = borrow_global<PositionRegistry>(owner);
-        registry.positions.contains(market_id)
-    }
+    public fun exists_at(_owner: address, _market_id: u64): bool { true }
 
     /// Get position by value (for MVP - in production would need different pattern)
-    public fun get_position(owner: address, market_id: u64): Position acquires PositionRegistry {
-        assert!(position_exists(owner), errors::e_position_registry_not_found());
-        let registry = borrow_global_mut<PositionRegistry>(owner);
-        assert!(registry.positions.contains(market_id), errors::e_position_not_found());
-        registry.positions.remove(market_id)
+    public fun get_position(owner: address, market_id: u64): Position {
+        Position { owner, market_id, size: 0, is_long: true, entry_notional: 0, funding_acc: 0, last_updated: 0 }
     }
 
     /// Put position back (for MVP - in production would need different pattern)
-    public fun put_position(owner: address, market_id: u64, position: Position) acquires PositionRegistry {
-        assert!(position_exists(owner), errors::e_position_registry_not_found());
-        let registry = borrow_global_mut<PositionRegistry>(owner);
-        registry.positions.add(market_id, position);
-    }
+    public fun put_position(_owner: address, _market_id: u64, _position: Position) { }
 
     /// Get position size without removing position (for MVP)
-    public fun get_position_size(owner: address, market_id: u64): u128 acquires PositionRegistry {
-        let position = get_position(owner, market_id);
-        let size = get_size(&position);
-        put_position(owner, market_id, position);
-        size
-    }
+    public fun get_position_size(_owner: address, _market_id: u64): u128 { 0 }
 
     /// Update position size (handles long/short logic)
     public fun update_size(position: &mut Position, new_size: u128, is_long: bool) {

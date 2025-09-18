@@ -1,5 +1,27 @@
 # 🚀 HyperPerp Test Suite
 
+```
+profiles:
+  hyperperp_publisher:
+    network: Testnet
+    private_key: ed25519-priv-0x16784b15393b798ddf3be455032c4b61dcf7d57090863a545db898b65bd8dc46
+    public_key: ed25519-pub-0x6e64ca879ec336085ba8a8e457c322edf75ce9693154dd092de59d08bbf0ee4a
+    account: 517206cb6757cc0723667a05afb9c05675341cd79570ba7cfb72f63241d55a2e
+    rest_url: "https://fullnode.testnet.aptoslabs.com"
+  alice:
+    network: Testnet
+    private_key: ed25519-priv-0x061ae028190f3895696c5061445abd3a2cc7bf4dcb5dacc3db62ad7efd99e0de
+    public_key: ed25519-pub-0x4df11bea5a8f3e658a4eb902c9e1ce07238a7a282ea9afbb3c1cf52dd49cff36
+    account: a9d9d029dd3a5dbdce6fc45e03e01e11d3915dc690ca0949129ba62779c54ce3
+    rest_url: "https://fullnode.testnet.aptoslabs.com"
+  bob:
+    network: Testnet
+    private_key: ed25519-priv-0x7a0fc67b353535e27ea3fc6f6f091d4d4ca95a710e45cf8668432968112a9606
+    public_key: ed25519-pub-0x7142bf31779d10a9dbf899e8e577f7bd4ec1219b6f251088d963b28fc46a349d
+    account: d79dfa69496af2bcf413f4b26657fe95f6cd3192242c77e0e88433b205b3c713
+    rest_url: "https://fullnode.testnet.aptoslabs.com"
+```
+
 Comprehensive testing framework for the HyperPerp decentralized perpetual exchange.
 
 ## 📊 Test Coverage
