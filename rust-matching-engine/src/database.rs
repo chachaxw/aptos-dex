@@ -202,7 +202,8 @@ impl Database {
         let rows = sqlx::query(
             r#"
             SELECT id, user_address, market_id, side, order_type, 
-                   size, price, filled_size, status, created_at, 
+                   CAST(size AS TEXT) as size, CAST(price AS TEXT) as price, 
+                   CAST(filled_size AS TEXT) as filled_size, status, created_at, 
                    updated_at, expires_at
             FROM orders 
             WHERE status IN ('pending', 'partially_filled')
@@ -262,8 +263,8 @@ impl Database {
         let rows = sqlx::query(
             r#"
             SELECT id, market_id, taker_order_id, maker_order_id,
-                   taker_address, maker_address, size, price,
-                   side, created_at, settlement_batch_id
+                   taker_address, maker_address, CAST(size AS TEXT) as size, 
+                   CAST(price AS TEXT) as price, side, created_at, settlement_batch_id
             FROM trades 
             WHERE settlement_batch_id IS NULL
             ORDER BY created_at ASC
