@@ -4,10 +4,10 @@ module hyperperp::oracle_adapter {
     struct Price has store, drop, copy { px: u64, conf: u64, ts: u64 }
     struct Cache has key { by_market: table::Table<u64, Price>, staleness_secs: u64 }
 
-    public fun init(admin: &signer, staleness_secs: u64) { move_to(admin, Cache { by_market: table::new<u64, Price>(), staleness_secs }) }
+    public entry fun init(admin: &signer, staleness_secs: u64) { move_to(admin, Cache { by_market: table::new<u64, Price>(), staleness_secs }) }
 
     /// MVP: admin feeds price; later: verify Pyth/Switchboard proofs
-    public fun push_price(admin: &signer, market_id: u64, px: u64, conf: u64, ts: u64) acquires Cache {
+    public entry fun push_price(admin: &signer, market_id: u64, px: u64, conf: u64, ts: u64) acquires Cache {
         let c = borrow_global_mut<Cache>(signer::address_of(admin));
         c.by_market.upsert(market_id, Price { px, conf, ts });
     }

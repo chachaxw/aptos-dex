@@ -1,7 +1,7 @@
 module hyperperp::gov {
     use std::signer;
-    use hyperperp::errors;
     use std::vector;
+    use hyperperp::errors;
 
     /// Simple multisig-like admin set
     struct Admins has key { members: vector<address>, paused: u64 }
@@ -16,8 +16,15 @@ module hyperperp::gov {
         move_to(cfg_owner, Withdrawers { members: vector::empty<address>() });
     }
 
-    public fun init_admins(creator: &signer, members: vector<address>) {
+    public entry fun init_admins(creator: &signer, members: vector<address>) {
         if (exists<Admins>(signer::address_of(creator))) errors::abort_already_initialized();
+        move_to(creator, Admins { members, paused: 0 });
+    }
+
+    public entry fun init_admins_single(creator: &signer, member: address) {
+        if (exists<Admins>(signer::address_of(creator))) errors::abort_already_initialized();
+        let members = vector::empty<address>();
+        vector::push_back(&mut members, member);
         move_to(creator, Admins { members, paused: 0 });
     }
 

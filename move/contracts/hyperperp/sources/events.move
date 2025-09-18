@@ -76,7 +76,7 @@ module hyperperp::events {
         FundingEvent { market_id, rate }
     }
 
-    public fun init_events(admin: &signer) {
+    public entry fun init_events(admin: &signer) {
         use aptos_framework::account;
         
         move_to(admin, EventStore {

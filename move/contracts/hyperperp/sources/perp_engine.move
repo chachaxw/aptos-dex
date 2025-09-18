@@ -1,10 +1,12 @@
 module hyperperp::perp_engine {
+    use std::vector;
     use hyperperp::events;
     use hyperperp::errors;
     use hyperperp::constants;
     use hyperperp::account as acct;
     use hyperperp::positions as pos;
     use hyperperp::risk;
+    use hyperperp::vault_fa as vfa;
 
     /// Fill and batch structs for perpetual trading
     public struct BatchFill has drop, store, copy { 
@@ -79,7 +81,11 @@ module hyperperp::perp_engine {
             apply_fill(f.taker, f.market_id, f.size, f.price_x, true, events_addr);  // taker goes long
             apply_fill(f.maker, f.market_id, f.size, f.price_x, false, events_addr); // maker goes short
 
-            // Collect fees to vault
+            // Quote settlement within pooled FA ledger (USDC)
+            let quote_delta: u128 = (f.size * (f.price_x as u128));
+            vfa::transfer_internal(admin, f.taker, f.maker, quote_delta);
+
+            // Collect fees to vault (placeholder)
             collect_fees(admin, f.taker, f.maker, fee_calc, events_addr);
 
             // Emit fill event
@@ -87,6 +93,28 @@ module hyperperp::perp_engine {
             
             i += 1;
         }
+    }
+
+    public entry fun apply_batch_simple(
+        admin: &signer,
+        taker: address,
+        maker: address,
+        market_id: u64,
+        size: u128,
+        price_x: u64,
+        fee_bps: u64,
+        ts: u64,
+        oracle_ts: u64,
+        min_px: u64,
+        max_px: u64,
+        expiry: u64,
+        events_addr: address
+    ) {
+        let fill = new_batch_fill(taker, maker, market_id, size, price_x, fee_bps, ts);
+        let fills = vector::empty<BatchFill>();
+        vector::push_back(&mut fills, fill);
+        let batch = new_settlement_batch(fills, oracle_ts, min_px, max_px, expiry);
+        apply_batch(admin, batch, events_addr);
     }
 
     /// Apply a single fill to update a position

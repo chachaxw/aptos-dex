@@ -11,7 +11,7 @@ module hyperperp::account {
         positions: table::Table<u64, address>, // index to Position key resource address (owner scoped)
     }
 
-    public fun open(user: &signer) {
+    public entry fun open(user: &signer) {
         let addr = signer::address_of(user);
         if (exists<Account>(addr)) errors::abort_already_initialized();
         move_to(user, Account { owner: addr, collateral: 0, unsettled_pnl: 0, last_funding_ts: 0, positions: table::new<u64, address>() });
