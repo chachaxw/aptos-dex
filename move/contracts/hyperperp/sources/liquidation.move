@@ -8,8 +8,7 @@ module hyperperp::liquidation {
     public fun liquidate(_caller: &signer, victim: address, market_id: u64, px: u64, events_addr: address) {
         // MVP liquidation: close entire position at px if under MMR
         if (!pos::exists_at(victim, market_id)) errors::abort_not_initialized();
-        let p = pos::borrow_mut(victim, market_id);
-        let size = pos::get_size(&p); 
+        let size = pos::get_position_size(victim, market_id); 
         if (size == 0) return;
         let collateral = acct::get_collateral(victim);
         let ok = risk::check_maintenance(collateral, size, px);

@@ -137,9 +137,9 @@ module hyperperp::position_tests {
         // Check existence
         assert!(pos::exists_at(owner, market_id), 1);
         
-        // Borrow position
-        let position = pos::borrow_mut(owner, market_id);
-        assert!(pos::get_size(&position) == 0, 2);
+        // Get position size
+        let size = pos::get_position_size(owner, market_id);
+        assert!(size == 0, 2);
     }
 }
 

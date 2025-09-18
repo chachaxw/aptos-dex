@@ -57,7 +57,7 @@ module hyperperp::e2e_tests {
 
         // 7) assert taker flat after liquidation
         // MVP stub - in real implementation would check actual position
-        let p_taker = pos::borrow_mut(taker_addr, MKT_BTC);
-        assert!(pos::get_size(&p_taker) == 0, 10003); // This will always pass in MVP stub
+        let size = pos::get_position_size(taker_addr, MKT_BTC);
+        assert!(size == 0, 10003); // This will always pass in MVP stub
     }
 }

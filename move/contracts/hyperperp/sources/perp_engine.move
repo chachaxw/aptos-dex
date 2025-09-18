@@ -49,7 +49,7 @@ module hyperperp::perp_engine {
 
     fun apply_fill(owner: address, market_id: u64, _size_delta: u128, _px: u64, is_long: bool) {
         // MVP stub - in real implementation this would update actual position storage
-        let _p = pos::borrow_mut(owner, market_id);
+        let _p = pos::get_position(owner, market_id);
         // TODO: implement actual position updates with proper storage
         // The `is_long` parameter indicates position direction:
         // - true: long position (positive size)

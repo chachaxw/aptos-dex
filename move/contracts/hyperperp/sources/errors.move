@@ -41,6 +41,15 @@ module hyperperp::errors {
     /// Insufficient collateral
     const E_INSUFFICIENT_COLLATERAL: u64 = 23;
 
+    /// Position registry already exists
+    const E_POSITION_REGISTRY_EXISTS: u64 = 24;
+
+    /// Position registry not found
+    const E_POSITION_REGISTRY_NOT_FOUND: u64 = 25;
+
+    /// Position not empty
+    const E_POSITION_NOT_EMPTY: u64 = 26;
+
     public fun abort_not_initialized() { abort E_NOT_INITIALIZED }
 
     public fun abort_already_initialized() { abort E_ALREADY_INITIALIZED }
@@ -77,4 +86,10 @@ module hyperperp::errors {
     public fun e_position_not_found(): u64 { E_POSITION_NOT_FOUND }
 
     public fun e_invalid_leverage(): u64 { E_INVALID_LEVERAGE }
+
+    public fun e_position_registry_exists(): u64 { E_POSITION_REGISTRY_EXISTS }
+
+    public fun e_position_registry_not_found(): u64 { E_POSITION_REGISTRY_NOT_FOUND }
+
+    public fun e_position_not_empty(): u64 { E_POSITION_NOT_EMPTY }
 }
