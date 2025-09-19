@@ -12,6 +12,7 @@ use aptos_rust_sdk_types::api_types::{
     },
     transaction_authenticator::TransactionAuthenticator,
     account::AccountResource,
+    type_tag::TypeTag,
 };
 use rust_decimal::Decimal;
 use std::convert::TryFrom;
@@ -161,7 +162,7 @@ impl AptosClient {
         let payload = TransactionPayload::EntryFunction(EntryFunction::new(
             ModuleId::new(self.contract_address, "vault_coin".to_string()),
             "deposit".to_string(),
-            vec![self.usdc_token_type.clone()], // USDC 代币类型参数
+            vec![TypeTag::from_str(&self.usdc_token_type)?], // USDC 代币类型参数
             vec![
                 bcs::to_bytes(&amount)?,                    // amount
                 bcs::to_bytes(&self.contract_address)?,      // admin_addr
@@ -336,7 +337,7 @@ impl AptosClient {
         let payload = TransactionPayload::EntryFunction(EntryFunction::new(
             ModuleId::new(self.contract_address, "vault_coin".to_string()),
             "withdraw_for".to_string(),
-            vec![self.usdc_token_type.clone()], // USDC 代币类型参数
+            vec![TypeTag::from_str(&self.usdc_token_type)?], // USDC 代币类型参数
             vec![
                 bcs::to_bytes(&user_addr)?,              // to
                 bcs::to_bytes(&amount)?,                  // amount
