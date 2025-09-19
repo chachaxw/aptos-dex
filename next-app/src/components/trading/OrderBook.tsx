@@ -340,9 +340,7 @@ export function OrderBook({
               {/* Recent Trades */}
               <div className="max-h-96 overflow-y-auto">
                 {recentTrades.length > 0 ? (
-                  recentTrades.map((trade, index) =>
-                    renderTradeItem(trade, index)
-                  )
+                  recentTrades.map(renderTradeItem)
                 ) : (
                   <div className="flex items-center justify-center py-8 text-gray-500">
                     <div className="text-center">
@@ -452,24 +450,6 @@ export function OrderBook({
 
         {/* Quick Actions */}
         <div className="p-4 border-t bg-gray-50 rounded-b-lg">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2 text-xs text-gray-500">
-              <Zap className="w-3 h-3" />
-              <span>
-                Last updated:{" "}
-                {orderBook
-                  ? new Date(orderBook.last_updated).toLocaleTimeString()
-                  : "Never"}
-              </span>
-            </div>
-
-            {spread && (
-              <Badge variant="outline" className="text-xs">
-                Spread: {spread.percentage.toFixed(2)}%
-              </Badge>
-            )}
-          </div>
-
           {midPrice && (
             <div className="mt-2 flex justify-center">
               <Button

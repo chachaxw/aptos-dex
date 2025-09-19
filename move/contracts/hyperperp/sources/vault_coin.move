@@ -85,7 +85,7 @@ module hyperperp::vault_coin {
     public entry fun withdraw_for<CoinType>(admin: &signer, to: address, amount: u128) acquires UsdcLedger {
         // Update ledger
         debit(admin, to, amount);
-        
+
         // Transfer coins from admin to user
         let coins = coin::withdraw<CoinType>(admin, (amount as u64));
         coin::deposit<CoinType>(to, coins);

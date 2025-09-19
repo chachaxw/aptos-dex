@@ -98,7 +98,7 @@ export function OrderWithFreeze({ marketId, onOrderSubmitted, className }: Order
       
       toast({
         title: "Freeze Transaction Ready",
-        description: `Please sign the transaction to freeze ${freezeData.required_collateral / 1_000_000} APT`,
+        description: `Please sign the transaction to freeze ${freezeData.required_collateral} USDC`,
       });
 
     } catch (err: any) {
@@ -115,7 +115,7 @@ export function OrderWithFreeze({ marketId, onOrderSubmitted, className }: Order
   };
 
   const handleSignFreeze = async () => {
-    if (!freezeResponse || !account?.address) return;
+    if (!freezeResponse || !account) return;
 
     setIsLoading(true);
     setError(null);
@@ -127,15 +127,13 @@ export function OrderWithFreeze({ marketId, onOrderSubmitted, className }: Order
         function: freezeResponse.freeze_transaction_payload.function as `${string}::${string}::${string}`,
         typeArguments: freezeResponse.freeze_transaction_payload.type_arguments,
         functionArguments: freezeResponse.freeze_transaction_payload.arguments,
-        multisigAddress: account?.address,
       };
 
       // Sign and submit the transaction
       const response = await signAndSubmitTransaction({
-        sender: account?.address,
+        sender: account.address,
         data: payload,
       });
-
 
       setStep('confirm');
       
@@ -272,6 +270,8 @@ export function OrderWithFreeze({ marketId, onOrderSubmitted, className }: Order
                     type="number"
                     placeholder="e.g., 0.1"
                     value={orderData.size}
+                    min={0}
+                    max={1000000}
                     onChange={(e) => handleInputChange('size', e.target.value)}
                   />
                 </div>
@@ -319,7 +319,7 @@ export function OrderWithFreeze({ marketId, onOrderSubmitted, className }: Order
                     {freezeResponse.message}
                   </p>
                   <div className="text-sm text-blue-600">
-                    <p><strong>Required Collateral:</strong> {freezeResponse.required_collateral / 1_000_000} APT</p>
+                    <p><strong>Required Collateral:</strong> {freezeResponse.required_collateral} USDC</p>
                     <p><strong>Order ID:</strong> {freezeResponse.order_id}</p>
                   </div>
                 </div>

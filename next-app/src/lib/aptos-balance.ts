@@ -1,15 +1,7 @@
-const APTOS_COIN = "0x29b0681a76b20595201859a5d2b269ae9d1fe98251198cefa513c95267003c0c::mint_test_coin::Coin";
-
 export interface AptosBalance {
   apt: number;
   usd: number;
   lastUpdated: Date;
-}
-
-export interface AccountResources {
-  coin: {
-    value: string;
-  };
 }
 
 /**
@@ -18,7 +10,7 @@ export interface AccountResources {
 export async function fetchAptBalance(address: string): Promise<number> {
   try {
     const response = await fetch(
-      `https://fullnode.testnet.aptoslabs.com/v1/accounts/${address}/balance/${APTOS_COIN}`
+      `${process.env.NEXT_PUBLIC_APTOS_NODE_URL}/accounts/${address}/resources`
     );
 
     if (!response.ok) {
@@ -26,8 +18,21 @@ export async function fetchAptBalance(address: string): Promise<number> {
     }
 
     const data = await response.json();
-    const octas = parseInt(data);
-    return octas / 1e6; // Convert from octas to APT
+    const coinStore = data?.find((r: any) => r.type.includes(`${process.env.NEXT_PUBLIC_CONTRACT_ADDRESS}::account::Account`));
+    
+    console.log('Data:', data);
+    console.log('Coin store:', coinStore);
+
+    if (coinStore) {
+      const balance = parseInt(coinStore.data.collateral);
+      const balanceInCoins = balance / 1_000_000; // 6 decimals
+      console.log('✅ Admin balance:', balanceInCoins, 'USDC');
+      return balanceInCoins // Convert from octas to USDC
+    } else {
+      console.log('❌ Coin store not found for user');
+    }
+
+    return 0;
   } catch (error) {
     console.error('Error fetching APT balance:', error);
     throw error;
@@ -68,15 +73,15 @@ export async function getAccountBalance(address: string): Promise<AptosBalance> 
 /**
  * Format currency values
  */
-export function formatCurrency(amount: number, currency: 'USD' | 'APT' | 'USDC' = 'USD'): string {
+export function formatCurrency(amount: number, currency: 'USDC' | 'APT' = 'USDC'): string {
   if (currency === 'APT') {
     return `${amount.toFixed(4)} APT`;
   }
 
   if (currency === 'USDC') {
-    return `${amount.toFixed(6)} USDC`;
+    return `${amount.toFixed(2)} USDC`;
   }
-  
+
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',

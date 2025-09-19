@@ -8,6 +8,7 @@ import { AptosClient, AptosAccount } from 'aptos';
 
 const NODE_URL = process.env.NEXT_PUBLIC_APTOS_NODE_URL || 'https://fullnode.testnet.aptoslabs.com/v1';
 const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '0x517206cb6757cc0723667a05afb9c05675341cd79570ba7cfb72f63241d55a2e';
+const aptCoinStoreType = `0x1::coin::CoinStore<0x29b0681a76b20595201859a5d2b269ae9d1fe98251198cefa513c95267003c0c::mint_test_coin::Coin>`;
 
 export interface DepositTransaction {
   transaction: string; // BCS-encoded transaction
@@ -50,7 +51,7 @@ export async function generateDepositTransaction(
   const payload = {
     type: "entry_function_payload",
     function: `${CONTRACT_ADDRESS}::vault_coin::deposit`,
-    type_arguments: ["0x1::aptos_coin::AptosCoin"],
+    type_arguments: ["0x29b0681a76b20595201859a5d2b269ae9d1fe98251198cefa513c95267003c0c::mint_test_coin::Coin"],
     arguments: [amount.toString(), CONTRACT_ADDRESS]
   };
   
@@ -104,19 +105,33 @@ export function useDeposit() {
     if (!signAndSubmitTransaction) {
       throw new Error('Wallet does not support transaction signing');
     }
+
+    const client = new AptosClient(NODE_URL);
     
-    // Create deposit transaction payload
+    // 1. Check if the user's account has registered for the test coin
+    const resources = await client.getAccountResources(account.address.toString());
+    const hasCoinStore = resources.some(r => r.type === aptCoinStoreType);
+
+    console.log('Has coin store:', hasCoinStore, amount);
+
+    // 2. Create deposit transaction payload
     const payload = {
       type: "entry_function_payload",
-      function: `${CONTRACT_ADDRESS}::vault::deposit`,
-      type_arguments: ["0x1::aptos_coin::AptosCoin"],
-      arguments: [amount.toString(), CONTRACT_ADDRESS]
+      function: `${CONTRACT_ADDRESS}::vault_coin::deposit` as `${string}::${string}::${string}`,
+      typeArguments: ["0x29b0681a76b20595201859a5d2b269ae9d1fe98251198cefa513c95267003c0c::mint_test_coin::Coin"],
+      functionArguments: [CONTRACT_ADDRESS, amount.toString()],
     };
 
     console.log('Deposit payload:', payload);
-    
-    // Sign and submit transaction
-    const response = await signAndSubmitTransaction(payload);
+
+    // 3. Sign and submit transaction using wallet
+    const response = await signAndSubmitTransaction({
+      sender: account.address,
+      data: payload,
+    });
+
+    // 4. Wait for confirmation
+    await client.waitForTransaction(response.hash);
     
     return {
       transaction_hash: response.hash,

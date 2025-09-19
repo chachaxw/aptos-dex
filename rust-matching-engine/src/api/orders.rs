@@ -122,7 +122,7 @@ fn calculate_required_collateral(order: &Order) -> u64 {
     };
     
     // 要求10%的抵押品，最少1000个最小单位
-    (notional_value / 10).max(1)
+    (notional_value).max(1)
 }
 
 pub async fn cancel_order(
@@ -303,11 +303,11 @@ pub async fn request_freeze_transaction(
 
     // Create freeze transaction payload
     let freeze_payload = FreezeTransactionPayload {
-        function: format!("{}::vault::freeze_funds", state.config.aptos.contract_address),
-        type_arguments: vec!["0x1::aptos_coin::AptosCoin".to_string()],
+        function: format!("{}::vault_coin::deposit", state.config.aptos.contract_address),
+        type_arguments: vec!["0x29b0681a76b20595201859a5d2b269ae9d1fe98251198cefa513c95267003c0c::mint_test_coin::Coin".to_string()],
         arguments: vec![
-            required_collateral.to_string(),
-            req.market_id.to_string(),
+            state.config.aptos.contract_address.to_string(),
+            (required_collateral*1000000).to_string(),
         ],
         gas_limit: 100_000,
         gas_unit_price: 100,
@@ -345,20 +345,26 @@ pub async fn confirm_order(
     }
 
     // Get the order from database (in a real implementation, you'd store pending orders)
+    let order = state.database.get_order(req.order_id).await
+        .map_err(|e| {
+            error!("Failed to get order: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
     // For now, we'll create a new order and process it
     let order = Order {
         id: req.order_id,
-        user_address: "".to_string(), // This would be retrieved from database
-        market_id: 1, // This would be retrieved from database
-        side: crate::models::OrderSide::Buy, // This would be retrieved from database
-        order_type: crate::models::OrderType::Limit, // This would be retrieved from database
-        size: Decimal::from_str("0.1").unwrap(),
-        price: Some(Decimal::from_str("40000").unwrap()),
+        user_address: order.user_address,
+        market_id: order.market_id,
+        side: order.side,
+        order_type: order.order_type,
+        size: order.size,
+        price: order.price,
         filled_size: Decimal::ZERO,
         status: OrderStatus::Pending,
         created_at: chrono::Utc::now(),
         updated_at: chrono::Utc::now(),
-        expires_at: None,
+        expires_at: order.expires_at,
     };
 
     // Submit order to matching engine

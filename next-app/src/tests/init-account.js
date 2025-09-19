@@ -7,9 +7,9 @@
 
 const { AptosClient, AptosAccount } = require('aptos');
 
-const NODE_URL = 'https://fullnode.devnet.aptoslabs.com/v1';
-const CONTRACT_ADDRESS = '0x95b011ec2dfc71780ec8bf5d4b229dee8de07d26f1867f50fd32cf3028a22e50';
-const ADMIN_PRIVATE_KEY = '0xfc3ffc5da0d9b2c817e86c8babf350dbdef2aa66cd63920d59367a78e8006b0f';
+const NODE_URL = 'https://fullnode.testnet.aptoslabs.com/v1';
+const CONTRACT_ADDRESS = '0xa8e8b873967f6377dbf95b4d7905cff68270899f133408e6b8a13667a6b70336';
+const ADMIN_PRIVATE_KEY = '0x6646457c414ae6fcc955f4fa625d572b243ccc1ab5d844cfb298d48cef450661';
 
 async function initAccount() {
   try {

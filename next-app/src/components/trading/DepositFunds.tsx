@@ -46,14 +46,14 @@ export function DepositFunds({ onDepositSuccess, className }: DepositFundsProps)
       return;
     }
 
-    // Convert to smallest units (1 APT = 100,000,000 smallest units)
-    const amountInSmallestUnits = Math.floor(depositAmount * 100_000_000);
+    // Convert to smallest units (1 Test Coin = 1,000,000 smallest units)
+    const amountInSmallestUnits = Math.floor(depositAmount * 1_000_000);
     
-    // Minimum deposit check (1 APT)
-    if (amountInSmallestUnits < 100_000_000) {
+    // Minimum deposit check (1 Test Coin)
+    if (amountInSmallestUnits < 1_000_000) {
       toast({
         title: "Amount Too Small",
-        description: "Minimum deposit is 1 APT",
+        description: "Minimum deposit is 1 Test Coin",
         variant: "destructive",
       });
       return;
@@ -71,7 +71,7 @@ export function DepositFunds({ onDepositSuccess, className }: DepositFundsProps)
 
       toast({
         title: "Deposit Successful!",
-        description: `Deposited ${depositAmount} APT to your trading account`,
+        description: `Deposited ${depositAmount} Test Coins to your trading account`,
       });
 
       // Notify parent component
@@ -93,9 +93,9 @@ export function DepositFunds({ onDepositSuccess, className }: DepositFundsProps)
   };
 
   const handleMaxDeposit = () => {
-    // For demo purposes, set to 10 APT
-    // In a real app, you'd check the user's actual APT balance
-    setAmount('10');
+    // For demo purposes, set to 100 Test Coins
+    // In a real app, you'd check the user's actual test coin balance
+    setAmount('100');
   };
 
   if (!connected) {
@@ -107,7 +107,7 @@ export function DepositFunds({ onDepositSuccess, className }: DepositFundsProps)
             <span>Deposit Funds</span>
           </CardTitle>
           <CardDescription>
-            Deposit APT to your trading account to place orders
+            Deposit Test USDC to your trading account to place orders
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -127,10 +127,10 @@ export function DepositFunds({ onDepositSuccess, className }: DepositFundsProps)
       <CardHeader>
         <CardTitle className="flex items-center space-x-2">
           <DollarSign className="w-5 h-5" />
-          <span>Deposit Funds</span>
+          <span>Deposit Test Coins</span>
         </CardTitle>
         <CardDescription>
-          Deposit APT to your trading account to place orders
+          Deposit Test Coins to your trading account to place orders
         </CardDescription>
       </CardHeader>
       
@@ -139,7 +139,7 @@ export function DepositFunds({ onDepositSuccess, className }: DepositFundsProps)
           <Alert className="border-green-200 bg-green-50">
             <CheckCircle className="h-4 w-4 text-green-600" />
             <AlertDescription className="text-green-800">
-              <div className="font-medium">Last Deposit: {lastDeposit.amount} APT</div>
+              <div className="font-medium">Last Deposit: {lastDeposit.amount} USDC</div>
               <div className="text-xs font-mono">
                 TX: {lastDeposit.txHash.slice(0, 8)}...{lastDeposit.txHash.slice(-8)}
               </div>
@@ -148,7 +148,7 @@ export function DepositFunds({ onDepositSuccess, className }: DepositFundsProps)
         )}
 
         <div className="space-y-2">
-          <Label htmlFor="deposit-amount">Amount (APT)</Label>
+          <Label htmlFor="deposit-amount">Amount (Test Coins)</Label>
           <div className="flex space-x-2">
             <Input
               id="deposit-amount"
@@ -169,7 +169,7 @@ export function DepositFunds({ onDepositSuccess, className }: DepositFundsProps)
             </Button>
           </div>
           <p className="text-xs text-gray-500">
-            Minimum deposit: 1 APT
+            Minimum deposit: 1 USDC
           </p>
         </div>
 
@@ -186,7 +186,7 @@ export function DepositFunds({ onDepositSuccess, className }: DepositFundsProps)
           ) : (
             <>
               <DollarSign className="w-4 h-4 mr-2" />
-              Deposit APT
+              Deposit Test Coins
             </>
           )}
         </Button>

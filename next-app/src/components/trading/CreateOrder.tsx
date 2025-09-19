@@ -21,18 +21,15 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Loader2, TrendingUp, TrendingDown } from "lucide-react";
-import {
-  MatchingEngineClient,
-  SubmitOrderRequest,
-  OrderResponse,
-} from "@/lib/matching-engine-client";
+import { MatchingEngineClient } from "@/lib/matching-engine-client";
 import { useToast } from "@/components/ui/use-toast";
+import { FreezeTransactionResponse } from "@/lib/type/order";
 
 interface CreateOrderProps {
   marketId?: number;
   defaultSide?: "Buy" | "Sell";
   defaultPrice?: string;
-  onOrderSubmitted?: (response: OrderResponse) => void;
+  onOrderSubmitted?: (orderId: string, txHash: string) => void;
 }
 
 const MARKETS = {
@@ -47,7 +44,7 @@ export function CreateOrder({
   defaultPrice,
   onOrderSubmitted,
 }: CreateOrderProps) {
-  const { account, connected } = useWallet();
+  const { account, connected, signAndSubmitTransaction } = useWallet();
   const { toast } = useToast();
   const [matchingEngine] = useState(() => new MatchingEngineClient());
 
@@ -67,6 +64,9 @@ export function CreateOrder({
   const [isEngineHealthy, setIsEngineHealthy] = useState(false);
   const [estimatedCost, setEstimatedCost] = useState<number>(0);
   const [maxBuyPower, setMaxBuyPower] = useState<number>(0);
+  const [error, setError] = useState<string | null>(null);
+  const [freezeResponse, setFreezeResponse] =
+    useState<FreezeTransactionResponse | null>(null);
 
   const market = MARKETS[marketId as keyof typeof MARKETS];
 
@@ -95,117 +95,104 @@ export function CreateOrder({
     }
   }, [orderData.size, orderData.price, orderData.side]);
 
-  const handleSubmitOrder = async () => {
-    if (!connected || !account) {
-      toast({
-        title: "Wallet Not Connected",
-        description: "Please connect your wallet to place orders",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!isEngineHealthy) {
-      toast({
-        title: "Matching Engine Offline",
-        description: "Please try again when the matching engine is online",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validation
-    if (!orderData.size || parseFloat(orderData.size) <= 0) {
-      toast({
-        title: "Invalid Size",
-        description: "Please enter a valid order size",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (
-      orderData.orderType === "Limit" &&
-      (!orderData.price || parseFloat(orderData.price) <= 0)
-    ) {
-      toast({
-        title: "Invalid Price",
-        description: "Please enter a valid price for limit orders",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Check buying power for buy orders
-    if (orderData.side === "Buy" && estimatedCost > maxBuyPower) {
-      toast({
-        title: "Insufficient Buying Power",
-        description: `Order cost ($${estimatedCost.toFixed(
-          2
-        )}) exceeds available balance ($${maxBuyPower.toFixed(2)})`,
-        variant: "destructive",
-      });
-      return;
-    }
+  const handleSignOrder = async () => {
+    if (!freezeResponse || !account) return;
 
     setIsSubmitting(true);
+    setError(null);
 
     try {
-      const orderRequest: SubmitOrderRequest = {
-        user_address: account.address.toString(),
-        market_id: marketId,
-        side: orderData.side,
-        order_type: orderData.orderType,
-        size: orderData.size,
-        price: orderData.orderType === "Limit" ? orderData.price : undefined,
-        expires_at:
-          orderData.timeInForce === "GTC"
-            ? undefined
-            : new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 24h from now
+      // Convert the freeze transaction payload to the format expected by the wallet
+      const payload = {
+        type: "entry_function_payload",
+        function: freezeResponse.freeze_transaction_payload
+          .function as `${string}::${string}::${string}`,
+        typeArguments: freezeResponse.freeze_transaction_payload.type_arguments,
+        functionArguments: freezeResponse.freeze_transaction_payload.arguments,
       };
 
-      const response = await matchingEngine.submitOrder(orderRequest);
-
-      toast({
-        title: "Order Submitted Successfully",
-        description: `${orderData.side.toUpperCase()} ${orderData.size} ${
-          market.symbol
-        } ${
-          orderData.orderType === "Limit"
-            ? `@ $${orderData.price}`
-            : "at market price"
-        }`,
+      // Sign and submit the transaction
+      const response = await signAndSubmitTransaction({
+        sender: account.address,
+        data: payload,
       });
 
-      // Reset form
-      setOrderData({
-        ...orderData,
-        size: "",
-        price: orderData.orderType === "Market" ? "" : orderData.price,
+      toast({
+        title: "Freeze Transaction Signed",
+        description: `Transaction confirmed: ${response.hash.slice(
+          0,
+          6
+        )}...${response.hash.slice(-4)}`,
       });
 
-      // Notify parent component
-      onOrderSubmitted?.(response);
-
-      // Show trade results if any
-      if (response.trades.length > 0) {
-        toast({
-          title: `${response.trades.length} Trade(s) Executed`,
-          description: `Filled ${response.trades.reduce(
-            (sum, trade) => sum + parseFloat(trade.size),
-            0
-          )} ${market.symbol}`,
-        });
-      }
-    } catch (error: any) {
-      console.error("Order submission failed:", error);
+      // Now confirm the order
+      await handleConfirmOrder(response.hash);
+    } catch (err: any) {
+      console.error("Freeze signing failed:", err);
+      setError(err.message || "Failed to sign freeze transaction");
       toast({
-        title: "Order Failed",
-        description: error.message || "Please try again",
+        title: "Freeze Signing Failed",
+        description: err.message || "An unexpected error occurred",
         variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleConfirmOrder = async (txHash: string) => {
+    if (!freezeResponse) return;
+
+    try {
+      const confirmRequest = {
+        order_id: freezeResponse.order_id,
+        signed_transaction_hash: txHash,
+      };
+
+      const response = await fetch("http://localhost:8080/orders/confirm", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(confirmRequest),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(
+          `Failed to confirm order: ${response.status} ${errorText}`
+        );
+      }
+
+      const confirmData = await response.json();
+
+      toast({
+        title: "Order Submitted Successfully!",
+        description: `Order ID: ${confirmData.order.id}`,
+      });
+
+      onOrderSubmitted?.(confirmData.order.id, txHash);
+
+      // Reset form
+      setOrderData({
+        side: "Buy",
+        orderType: "Limit",
+        size: "",
+        price: "",
+        reduceOnly: false,
+        postOnly: false,
+        timeInForce: "GTC",
+      });
+      setFreezeResponse(null);
+    } catch (err: any) {
+      console.error("Order confirmation failed:", err);
+      setError(err.message || "Failed to confirm order");
+      toast({
+        title: "Order Confirmation Failed",
+        description: err.message || "An unexpected error occurred",
+        variant: "destructive",
+      });
     }
   };
 
@@ -412,7 +399,7 @@ export function CreateOrder({
 
         {/* Submit Button */}
         <Button
-          onClick={handleSubmitOrder}
+          onClick={handleSignOrder}
           disabled={
             !connected || isSubmitting || !orderData.size || !isEngineHealthy
           }
@@ -434,7 +421,7 @@ export function CreateOrder({
               ) : (
                 <TrendingDown className="w-4 h-4 mr-2" />
               )}
-              {orderData.side.toUpperCase()} {market.symbol.split("-")[0]}
+              {orderData.side.toUpperCase()}
             </>
           )}
         </Button>

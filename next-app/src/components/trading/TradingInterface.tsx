@@ -3,20 +3,18 @@
 import React, { useState } from "react";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Wallet } from "lucide-react";
 
-import { OrderWithFreeze } from "./OrderWithFreeze";
 import { OrderBook } from "./OrderBook";
 import { UserOrders } from "./UserOrders";
 import { TradingChart } from "./TradingChart";
 import { MarketSelector } from "./MarketSelector";
-import { PositionPanel } from "./PositionPanel";
 import AccountBalance from "./AccountBalance";
-import { DepositFunds } from "./DepositFunds";
+import { AccountInitialization } from "./AccountInitialization";
 
-import { OrderResponse } from "@/lib/matching-engine-client";
 import { useToast } from "@/components/ui/use-toast";
+import { useHyperPerpAccount } from "@/lib/useHyperPerpAccount";
+import { OrderWithFreeze } from "./OrderWithFreeze";
+import { CreateOrder } from "./CreateOrder";
 
 const MARKETS = {
   1: { symbol: "BTC-USDC", name: "Bitcoin", icon: "₿" },
@@ -27,6 +25,7 @@ const MARKETS = {
 export function TradingInterface() {
   const { account, connected } = useWallet();
   const { toast } = useToast();
+  const { isInitialized } = useHyperPerpAccount();
 
   // Trading state
   const [selectedMarket, setSelectedMarket] = useState<number>(1);
@@ -41,26 +40,16 @@ export function TradingInterface() {
     setLastActivity(new Date());
 
     // Show success notification with trade details
-    if (txHash) {
+    if (orderId) {
       toast({
         title: "Order Executed",
-        description: `Order ${orderId} executed with transaction hash ${txHash}`,
+        description: `Order ${orderId} executed with tx hash ${txHash}`,
       });
     }
   };
 
   const handlePriceClick = (price: string, side: "Buy" | "Sell") => {
     setOrderFormData({ side, price });
-  };
-
-  const handleDepositSuccess = (amount: number, txHash: string) => {
-    toast({
-      title: "Deposit Successful!",
-      description: `Deposited ${amount} APT to your trading account`,
-    });
-
-    // Update last activity
-    setLastActivity(new Date());
   };
 
   const market = MARKETS[selectedMarket as keyof typeof MARKETS];
@@ -74,48 +63,50 @@ export function TradingInterface() {
         markets={MARKETS}
       />
 
-      {/* Alerts */}
-      {!connected && (
-        <Alert>
-          <Wallet className="h-4 w-4" />
-          <AlertDescription>
-            Connect your wallet to start trading on HyperPerp
-          </AlertDescription>
-        </Alert>
+      {/* Account Initialization Check */}
+      {connected && account && isInitialized === false && (
+        <div className="mb-4">
+          <AccountInitialization />
+        </div>
       )}
 
       {/* Main Trading Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-2">
-        {/* Left Column: Chart and Market Data */}
-        <div className="lg:col-span-2 space-y-2">
-          <TradingChart marketId={selectedMarket} />
-          <PositionPanel marketId={selectedMarket} />
-        </div>
+      {connected && account && isInitialized !== false && (
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-2">
+          {/* Left Column: Chart and Market Data */}
+          <div className="lg:col-span-2 space-y-2">
+            <TradingChart marketId={selectedMarket} />
+          </div>
 
-        {/* Middle Column: Order Book */}
-        <div className="space-y-2">
-          <OrderBook
-            marketId={selectedMarket}
-            onPriceClick={handlePriceClick}
-            className="h-full"
-          />
-        </div>
+          {/* Middle Column: Order Book */}
+          <div className="space-y-2">
+            <OrderBook
+              marketId={selectedMarket}
+              onPriceClick={handlePriceClick}
+              className="h-full"
+            />
+          </div>
 
-        {/* Right Column: Order Entry and Management */}
-        <div className="space-y-2">
-          <AccountBalance />
-          <OrderWithFreeze
-            marketId={selectedMarket}
-            onOrderSubmitted={handleOrderSubmitted}
-          />
-          <DepositFunds onDepositSuccess={handleDepositSuccess} />
+          {/* Right Column: Order Entry and Management */}
+          <div className="space-y-2">
+            <AccountBalance />
+            <CreateOrder
+              defaultSide={orderFormData.side}
+              defaultPrice={orderFormData.price}
+              marketId={selectedMarket}
+              onOrderSubmitted={handleOrderSubmitted}
+            />
+          </div>
         </div>
-      </div>
+      )}
 
-      <UserOrders
-        marketId={selectedMarket}
-        userAddress={account?.address?.toString()}
-      />
+      {connected && account && isInitialized !== false && (
+        <UserOrders
+          className="flex-1"
+          marketId={selectedMarket}
+          userAddress={account?.address?.toString()}
+        />
+      )}
 
       {/* Footer Status */}
       <div className="flex items-center justify-between text-xs text-gray-500 py-4 border-t">
