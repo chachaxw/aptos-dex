@@ -35,7 +35,66 @@ HyperPerp Matching Engine 是一个基于 Rust 的高性能订单撮合引擎，
 
 ## API 接口
 
-### 1. 健康检查
+### 1. 市场信息查询
+
+#### 1.1 获取所有市场信息
+
+获取所有可用的交易市场信息。
+
+**接口信息：**
+- **URL：** `GET /markets`
+- **描述：** 获取所有可用的交易市场列表
+- **认证：** 无需认证
+
+**响应示例：**
+```json
+[
+  {
+    "market_id": 1,
+    "symbol": "BTC/USDC",
+    "base_token": "BTC",
+    "quote_token": "USDC"
+  },
+  {
+    "market_id": 2,
+    "symbol": "ETH/USDC",
+    "base_token": "ETH",
+    "quote_token": "USDC"
+  },
+  {
+    "market_id": 3,
+    "symbol": "SOL/USDC",
+    "base_token": "SOL",
+    "quote_token": "USDC"
+  }
+]
+```
+
+#### 1.2 根据市场ID查询市场信息
+
+根据指定的市场ID获取单个市场信息。
+
+**接口信息：**
+- **URL：** `GET /markets/{market_id}`
+- **描述：** 根据市场ID获取特定市场信息
+- **认证：** 无需认证
+- **路径参数：**
+  - `market_id` (u64): 市场ID
+
+**响应示例：**
+```json
+{
+  "market_id": 3,
+  "symbol": "SOL/USDC",
+  "base_token": "SOL",
+  "quote_token": "USDC"
+}
+```
+
+**错误响应：**
+- `404 Not Found`: 市场不存在
+
+### 2. 健康检查
 
 检查服务状态和可用性。
 
