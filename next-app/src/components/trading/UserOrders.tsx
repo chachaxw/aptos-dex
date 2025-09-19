@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -26,31 +26,31 @@ interface UserOrdersProps {
 }
 
 const ORDER_STATUS_CONFIG = {
-  pending: { 
+  Pending: {
     icon: Clock, 
     color: 'text-yellow-600', 
     bg: 'bg-yellow-50', 
     label: 'Pending' 
   },
-  partiallyfilled: { 
+  PartiallyFilled: {
     icon: TrendingUp, 
     color: 'text-blue-600', 
     bg: 'bg-blue-50', 
     label: 'Partial' 
   },
-  filled: { 
+  Filled: {
     icon: CheckCircle, 
     color: 'text-green-600', 
     bg: 'bg-green-50', 
     label: 'Filled' 
-  },
-  cancelled: { 
+  },  
+  Cancelled: {
     icon: XCircle, 
     color: 'text-gray-600', 
     bg: 'bg-gray-50', 
     label: 'Cancelled' 
   },
-  expired: { 
+  Expired: {
     icon: AlertCircle, 
     color: 'text-red-600', 
     bg: 'bg-red-50', 
@@ -66,7 +66,7 @@ export function UserOrders({ marketId, userAddress, className }: UserOrdersProps
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [cancellingOrders, setCancellingOrders] = useState<Set<string>>(new Set());
 
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     if (!userAddress) {
       setOrders([]);
       setIsLoading(false);
@@ -82,7 +82,7 @@ export function UserOrders({ marketId, userAddress, className }: UserOrdersProps
       setOrders([]);
     }
     setIsLoading(false);
-  };
+  }, [matchingEngine, userAddress, marketId]);
 
   const refreshOrders = async () => {
     setIsRefreshing(true);
@@ -92,7 +92,7 @@ export function UserOrders({ marketId, userAddress, className }: UserOrdersProps
 
   useEffect(() => {
     fetchOrders();
-  }, [userAddress, marketId]);
+  }, [userAddress, marketId, fetchOrders]);
 
   // Auto-refresh every 10 seconds
   useEffect(() => {
@@ -100,7 +100,7 @@ export function UserOrders({ marketId, userAddress, className }: UserOrdersProps
     
     const interval = setInterval(fetchOrders, 10000);
     return () => clearInterval(interval);
-  }, [userAddress, marketId]);
+  }, [userAddress, marketId, fetchOrders]);
 
   const handleCancelOrder = async (orderId: string) => {
     setCancellingOrders(prev => new Set(prev).add(orderId));
@@ -117,7 +117,7 @@ export function UserOrders({ marketId, userAddress, className }: UserOrdersProps
         // Update local state
         setOrders(prev => prev.map(order => 
           order.id === orderId 
-            ? { ...order, status: 'cancelled' }
+            ? { ...order, status: 'Cancelled' }
             : order
         ));
       } else {
@@ -146,8 +146,8 @@ export function UserOrders({ marketId, userAddress, className }: UserOrdersProps
     const statusConfig = ORDER_STATUS_CONFIG[order.status];
     const StatusIcon = statusConfig.icon;
     const fillPercentage = (parseFloat(order.filled_size) / parseFloat(order.size)) * 100;
-    const isBuy = order.side === 'buy';
-    const canCancel = ['pending', 'partiallyfilled'].includes(order.status);
+    const isBuy = order.side === 'Buy';
+    const canCancel = ['Pending', 'PartiallyFilled'].includes(order.status);
     const isCancelling = cancellingOrders.has(order.id);
 
     return (
@@ -226,8 +226,8 @@ export function UserOrders({ marketId, userAddress, className }: UserOrdersProps
     );
   };
 
-  const activeOrders = orders.filter(order => ['pending', 'partiallyfilled'].includes(order.status));
-  const completedOrders = orders.filter(order => ['filled', 'cancelled', 'expired'].includes(order.status));
+  const activeOrders = orders.filter(order => ['Pending', 'PartiallyFilled'].includes(order.status));
+  const completedOrders = orders.filter(order => ['Filled', 'Cancelled', 'Expired'].includes(order.status));
 
   return (
     <Card className={className}>

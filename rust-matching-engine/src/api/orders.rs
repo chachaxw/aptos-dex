@@ -12,7 +12,8 @@ use uuid::Uuid;
 use crate::{
     models::{
         Order, OrderBook, OrderBookLevel, OrderResponse, OrderStatus, OrderType,
-        SubmitOrderRequest,
+        SubmitOrderRequest, FreezeTransactionRequest, FreezeTransactionResponse,
+        FreezeTransactionPayload, ConfirmOrderRequest, ConfirmOrderResponse,
     },
     SharedState,
 };
@@ -121,7 +122,7 @@ fn calculate_required_collateral(order: &Order) -> u64 {
     };
     
     // 要求10%的抵押品，最少1000个最小单位
-    (notional_value / 10).max(1)
+    (notional_value).max(1)
 }
 
 pub async fn cancel_order(
@@ -245,4 +246,140 @@ fn aggregate_order_levels(orders: &[Order]) -> Vec<OrderBookLevel> {
     let mut result: Vec<_> = levels.into_values().collect();
     result.sort_by(|a, b| b.price.cmp(&a.price)); // Descending order
     result
+}
+
+// ==================== User-Signed Freeze API Endpoints ====================
+
+/// Step 1: Request freeze transaction payload
+pub async fn request_freeze_transaction(
+    State(state): State<SharedState>,
+    Json(req): Json<FreezeTransactionRequest>,
+) -> Result<Json<FreezeTransactionResponse>, StatusCode> {
+    info!("Received freeze transaction request: {} {} {}", 
+        req.side, req.size, req.market_id);
+
+    // Parse size
+    let size = Decimal::from_str(&req.size)
+        .map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    // Parse price for limit orders
+    let price = match req.order_type {
+        OrderType::Limit => {
+            req.price.ok_or(StatusCode::BAD_REQUEST)?
+                .parse::<Decimal>()
+                .map_err(|_| StatusCode::BAD_REQUEST)?
+        }
+        OrderType::Market => Decimal::ZERO, // Market orders don't have price
+    };
+
+    // Create order with Pending status
+    let order = Order {
+        id: Uuid::new_v4(),
+        user_address: req.user_address.clone(),
+        market_id: req.market_id,
+        side: req.side.clone(),
+        order_type: req.order_type.clone(),
+        size,
+        price: if req.order_type == OrderType::Limit { Some(price) } else { None },
+        filled_size: Decimal::ZERO,
+        status: OrderStatus::Pending,
+        created_at: chrono::Utc::now(),
+        updated_at: chrono::Utc::now(),
+        expires_at: req.expires_at,
+    };
+
+    // Calculate required collateral
+    let required_collateral = calculate_required_collateral(&order);
+    
+    // Validate user has sufficient collateral
+    if !state.aptos_client.validate_collateral(&req.user_address, required_collateral).await
+        .map_err(|e| {
+            error!("Failed to validate collateral: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })? {
+        warn!("Insufficient collateral for user {}: required {}", req.user_address, required_collateral);
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    // Create freeze transaction payload
+    let freeze_payload = FreezeTransactionPayload {
+        function: format!("{}::vault_coin::deposit", state.config.aptos.contract_address),
+        type_arguments: vec!["0x29b0681a76b20595201859a5d2b269ae9d1fe98251198cefa513c95267003c0c::mint_test_coin::Coin".to_string()],
+        arguments: vec![
+            state.config.aptos.contract_address.to_string(),
+            (required_collateral*1000000).to_string(),
+        ],
+        gas_limit: 100_000,
+        gas_unit_price: 100,
+    };
+
+    let response = FreezeTransactionResponse {
+        order_id: order.id,
+        freeze_transaction_payload: freeze_payload,
+        required_collateral,
+        message: "Please sign the freeze transaction with your wallet to confirm the order".to_string(),
+    };
+
+    info!("Freeze transaction payload created for order {}: {} collateral required", 
+        order.id, required_collateral);
+    
+    Ok(Json(response))
+}
+
+/// Step 2: Confirm order with signed transaction hash
+pub async fn confirm_order(
+    State(state): State<SharedState>,
+    Json(req): Json<ConfirmOrderRequest>,
+) -> Result<Json<ConfirmOrderResponse>, StatusCode> {
+    info!("Received order confirmation: order_id={}, tx_hash={}", 
+        req.order_id, req.signed_transaction_hash);
+
+    // Verify the transaction was successful
+    if !state.aptos_client.wait_for_transaction_confirmation(&req.signed_transaction_hash, 10).await
+        .map_err(|e| {
+            error!("Failed to verify transaction confirmation: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })? {
+        warn!("Transaction not confirmed for order {}", req.order_id);
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    // Get the order from database (in a real implementation, you'd store pending orders)
+    let order = state.database.get_order(req.order_id).await
+        .map_err(|e| {
+            error!("Failed to get order: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    // For now, we'll create a new order and process it
+    let order = Order {
+        id: req.order_id,
+        user_address: order.user_address,
+        market_id: order.market_id,
+        side: order.side,
+        order_type: order.order_type,
+        size: order.size,
+        price: order.price,
+        filled_size: Decimal::ZERO,
+        status: OrderStatus::Pending,
+        created_at: chrono::Utc::now(),
+        updated_at: chrono::Utc::now(),
+        expires_at: order.expires_at,
+    };
+
+    // Submit order to matching engine
+    match state.matching_engine.write().await.submit_order(order.clone()).await {
+        Ok(trades) => {
+            let response = ConfirmOrderResponse {
+                order,
+                trades,
+                message: "Order confirmed and submitted successfully".to_string(),
+            };
+            Ok(Json(response))
+        }
+        Err(e) => {
+            error!("Failed to submit confirmed order: {}", e);
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }

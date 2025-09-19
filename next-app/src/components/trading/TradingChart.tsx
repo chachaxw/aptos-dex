@@ -44,7 +44,7 @@ export function TradingChart({ marketId, className }: TradingChartProps) {
   // Mock chart data (would come from API in production)
   const generateMockData = useCallback((): CandleData[] => {
     const data: CandleData[] = [];
-    let basePrice = marketId === 1 ? 43000 : marketId === 2 ? 2600 : 95;
+    let basePrice = marketId === 1 ? 117000 : marketId === 2 ? 4600 : 245;
     const now = Date.now();
     const interval = selectedTimeframe === '1m' ? 60000 : 
                     selectedTimeframe === '5m' ? 300000 :

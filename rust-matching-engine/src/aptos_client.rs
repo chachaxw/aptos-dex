@@ -4,15 +4,9 @@ use aptos_rust_sdk::client::builder::AptosClientBuilder;
 use hex;
 use aptos_rust_sdk::client::config::AptosNetwork;
 use aptos_rust_sdk_types::api_types::{
-    address::AccountAddress,
-    chain_id::ChainId,
-    module_id::ModuleId, 
-    transaction::{
+    account::AccountResource, address::AccountAddress, chain_id::ChainId, module_id::ModuleId, transaction::{
         EntryFunction, GenerateSigningMessage, RawTransaction, SignedTransaction, TransactionPayload,
-    },
-    transaction_authenticator::TransactionAuthenticator,
-    account::AccountResource,
-    type_tag::TypeTag,
+    }, transaction_authenticator::TransactionAuthenticator, type_tag::{StructTag, TypeTag}
 };
 use rust_decimal::Decimal;
 use std::convert::TryFrom;
@@ -162,7 +156,12 @@ impl AptosClient {
         let payload = TransactionPayload::EntryFunction(EntryFunction::new(
             ModuleId::new(self.contract_address, "vault_coin".to_string()),
             "deposit".to_string(),
-            vec![TypeTag::from_str(&self.usdc_token_type)?], // USDC 代币类型参数
+            vec![TypeTag::Struct(Box::new(StructTag {
+                address: self.contract_address,
+                module: "vault_coin".to_owned(),
+                name: "Coin".to_owned(),
+                type_args: vec![],
+            }))], // USDC 代币类型参数
             vec![
                 bcs::to_bytes(&amount)?,                    // amount
                 bcs::to_bytes(&self.contract_address)?,      // admin_addr
@@ -190,6 +189,7 @@ impl AptosClient {
     pub async fn get_user_collateral(&self, user_address: &str) -> Result<u64> {
         let resources = self.client.get_account_resources(user_address.to_string()).await?;
         info!("result Resources: {:?}", resources);
+        
         // 查找账户资源中的抵押品余额
         for resource in resources.into_inner() {
             if resource.type_.contains("Account") {
@@ -290,15 +290,9 @@ impl AptosClient {
         tx_hash: &str,
         max_attempts: u32,
     ) -> Result<bool> {
-        // 在测试环境中，模拟交易直接返回成功确认
-        if tx_hash.starts_with("mock_") {
-            info!("Test environment: simulating transaction confirmation for {}", tx_hash);
-            return Ok(true);
-        }
-        
         for attempt in 1..=max_attempts {
             tokio::time::sleep(Duration::from_secs(1)).await;
-            
+
             if self.check_transaction_status(tx_hash).await? {
                 info!("Transaction {} confirmed after {} attempts", tx_hash, attempt);
                 return Ok(true);
@@ -335,12 +329,17 @@ impl AptosClient {
 
         // 创建解冻资金的交易载荷 - 调用vault_coin::withdraw_for
         let payload = TransactionPayload::EntryFunction(EntryFunction::new(
-            ModuleId::new(self.contract_address, "vault_coin".to_string()),
-            "withdraw_for".to_string(),
-            vec![TypeTag::from_str(&self.usdc_token_type)?], // USDC 代币类型参数
+            ModuleId::new(self.contract_address, "vault_coin".to_owned()),
+            "withdraw_for".to_owned(),
+            vec![TypeTag::Struct(Box::new(StructTag {
+                address: self.contract_address,
+                module: "vault_coin".to_owned(),
+                name: "Coin".to_owned(),
+                type_args: vec![],
+            }))], // USDC 代币类型参数
             vec![
                 bcs::to_bytes(&user_addr)?,              // to
-                bcs::to_bytes(&amount)?,                  // amount
+                bcs::to_bytes(&amount)?,                 // amount
             ],
         ));
 
@@ -437,6 +436,50 @@ impl AptosClient {
     async fn get_expiration_timestamp(&self) -> Result<u64> {
         let state = self.client.get_state().await?;
         Ok(state.timestamp_usecs / 1000 / 1000 + 30) // 30秒后过期
+    }
+
+    // ==================== 功能4: 用户存款 ====================
+    
+    /// 用户存款到HyperPerp金库
+    pub async fn deposit_funds(
+        &self,
+        user_address: &str,
+        amount: u64,
+    ) -> Result<String> {
+        info!("Depositing {} APT for user {}", amount, user_address);
+
+        // 获取用户账户信息
+        let resources = self.client.get_account_resources(user_address.to_string()).await?;
+        let sequence_number = self.get_sequence_number(&resources.into_inner())?;
+
+        let user_addr = AccountAddress::from_str(user_address)?;
+
+        // 创建存款交易载荷 - 调用vault::deposit
+        let payload = TransactionPayload::EntryFunction(EntryFunction::new(
+            ModuleId::new(self.contract_address, "vault".to_string()),
+            "deposit".to_string(),
+            vec![], // 类型参数
+            vec![
+                bcs::to_bytes(&amount)?,                  // amount
+                bcs::to_bytes(&self.contract_address)?,   // cfg_addr
+            ],
+        ));
+
+        // 创建原始交易
+        let raw_txn = RawTransaction::new(
+            user_addr,
+            sequence_number,
+            payload,
+            100_000, // gas limit
+            100,     // gas unit price
+            self.get_expiration_timestamp().await?,
+            self.chain_id,
+        );
+
+        // 签名并提交
+        let tx_hash = self.sign_and_submit_transaction(raw_txn).await?;
+        info!("Deposit transaction submitted: tx {}", tx_hash);
+        Ok(tx_hash)
     }
 }
 

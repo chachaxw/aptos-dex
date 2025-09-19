@@ -35,12 +35,12 @@ export function PositionPanel({ marketId, className }: PositionPanelProps) {
   const [position, setPosition] = useState<Position | null>({
     market_id: marketId,
     size: 0.5, // Long 0.5 BTC
-    entry_price: 42500.00,
-    mark_price: 43250.50,
-    unrealized_pnl: 375.25,
-    margin_used: 2125.00,
+    entry_price: 115500.00,
+    mark_price: 117500.50,
+    unrealized_pnl: 2000.25,
+    margin_used: 0,
     margin_ratio: 0.15, // 15% margin usage
-    liquidation_price: 35000.00,
+    liquidation_price: 105000.00,
   });
 
   const [accountBalance, setAccountBalance] = useState({
@@ -237,29 +237,6 @@ export function PositionPanel({ marketId, className }: PositionPanelProps) {
           >
             Add Margin
           </Button>
-        </div>
-
-        {/* Account Summary */}
-        <div className="pt-4 border-t space-y-2">
-          <h4 className="text-sm font-medium flex items-center space-x-2">
-            <DollarSign className="w-4 h-4" />
-            <span>Account Balance</span>
-          </h4>
-          
-          <div className="grid grid-cols-2 gap-4 text-xs">
-            <div>
-              <span className="text-gray-500">Total Balance:</span>
-              <span className="ml-1 font-mono font-medium">
-                ${accountBalance.total_balance.toFixed(2)}
-              </span>
-            </div>
-            <div>
-              <span className="text-gray-500">Available:</span>
-              <span className="ml-1 font-mono font-medium text-green-600">
-                ${accountBalance.available_balance.toFixed(2)}
-              </span>
-            </div>
-          </div>
         </div>
       </CardContent>
     </Card>

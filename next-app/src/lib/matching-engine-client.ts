@@ -7,12 +7,12 @@ export interface Order {
   id: string;
   user_address: string;
   market_id: number;
-  side: 'buy' | 'sell';
-  order_type: 'market' | 'limit';
+  side: 'Buy' | 'Sell';
+  order_type: 'Market' | 'Limit';
   size: string;
   price?: string;
   filled_size: string;
-  status: 'pending' | 'partiallyfilled' | 'filled' | 'cancelled' | 'expired';
+  status: 'Pending' | 'PartiallyFilled' | 'Filled' | 'Cancelled' | 'Expired';
   created_at: string;
   updated_at: string;
   expires_at?: string;
@@ -27,7 +27,7 @@ export interface Trade {
   maker_address: string;
   size: string;
   price: string;
-  side: 'buy' | 'sell';
+  side: 'Buy' | 'Sell';
   created_at: string;
 }
 
@@ -52,11 +52,22 @@ export interface OrderBook {
 export interface SubmitOrderRequest {
   user_address: string;
   market_id: number;
-  side: 'buy' | 'sell';
-  order_type: 'market' | 'limit';
+  side: 'Buy' | 'Sell';
+  order_type: 'Market' | 'Limit';
   size: string;
   price?: string;
   expires_at?: string;
+}
+
+export interface DepositRequest {
+  user_address: string;
+  amount: number;
+}
+
+export interface DepositResponse {
+  transaction_hash: string;
+  amount: number;
+  user_address: string;
 }
 
 export interface MarketData {
@@ -97,6 +108,24 @@ export class MatchingEngineClient {
     if (!response.ok) {
       const error = await response.text();
       throw new Error(`Failed to submit order: ${response.status} ${error}`);
+    }
+
+    return response.json();
+  }
+
+  async depositFunds(deposit: DepositRequest): Promise<DepositResponse> {
+    const response = await fetch(`${this.baseUrl}/deposit`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(deposit)
+    });
+
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Failed to deposit funds: ${response.status} ${error}`);
     }
 
     return response.json();

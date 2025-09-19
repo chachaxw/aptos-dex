@@ -4,8 +4,8 @@ version = "0.1.1"
 upgrade_policy = "compatible"
 
 [addresses]
-hyperperp = "0x517206cb6757cc0723667a05afb9c05675341cd79570ba7cfb72f63241d55a2e"
-admin = "0x517206cb6757cc0723667a05afb9c05675341cd79570ba7cfb72f63241d55a2e"
+hyperperp = "_"
+admin = "_"
 std = "0x1"
 aptos_framework = "0x1"
 aptos_std = "0x1"
