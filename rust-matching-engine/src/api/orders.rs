@@ -53,7 +53,7 @@ pub async fn submit_order(
         side: req.side,
         order_type: req.order_type,
         size,
-        price,
+        price: price,
         filled_size: Decimal::ZERO,
         status: OrderStatus::Pending,
         created_at: chrono::Utc::now(),
@@ -85,7 +85,7 @@ pub async fn submit_order(
             info!("Funds frozen for user {}: tx {}", order.user_address, tx_hash);
             
             // 等待资金冻结确认
-            if !state.aptos_client.wait_for_transaction_confirmation(&tx_hash, 10).await
+            if !state.aptos_client.wait_for_transaction_confirmation(&tx_hash, 3).await
                 .map_err(|e| {
                     error!("Failed to wait for freeze confirmation: {}", e);
                     StatusCode::INTERNAL_SERVER_ERROR
@@ -156,7 +156,7 @@ pub async fn cancel_order(
                         info!("Funds unfrozen for user {}: tx {}", order_info.user_address, tx_hash);
                         
                         // 等待资金解冻确认
-                        if !state.aptos_client.wait_for_transaction_confirmation(&tx_hash, 10).await
+                        if !state.aptos_client.wait_for_transaction_confirmation(&tx_hash, 3).await
                             .map_err(|e| {
                                 error!("Failed to wait for unfreeze confirmation: {}", e);
                                 StatusCode::INTERNAL_SERVER_ERROR
@@ -280,7 +280,7 @@ pub async fn request_freeze_transaction(
         side: req.side.clone(),
         order_type: req.order_type.clone(),
         size,
-        price: if req.order_type == OrderType::Limit { Some(price) } else { None },
+        price: Some(price),
         filled_size: Decimal::ZERO,
         status: OrderStatus::Pending,
         created_at: chrono::Utc::now(),
@@ -335,7 +335,7 @@ pub async fn confirm_order(
         req.order_id, req.signed_transaction_hash);
 
     // Verify the transaction was successful
-    if !state.aptos_client.wait_for_transaction_confirmation(&req.signed_transaction_hash, 10).await
+    if !state.aptos_client.wait_for_transaction_confirmation(&req.signed_transaction_hash, 3).await
         .map_err(|e| {
             error!("Failed to verify transaction confirmation: {}", e);
             StatusCode::INTERNAL_SERVER_ERROR
@@ -344,27 +344,30 @@ pub async fn confirm_order(
         return Err(StatusCode::BAD_REQUEST);
     }
 
-    // Get the order from database (in a real implementation, you'd store pending orders)
-    let order = state.database.get_order(req.order_id).await
-        .map_err(|e| {
-            error!("Failed to get order: {}", e);
-            StatusCode::INTERNAL_SERVER_ERROR
-        })?;
+    // Parse price for limit orders
+    let price = match req.order_type {
+        OrderType::Limit => {
+            req.price.ok_or(StatusCode::BAD_REQUEST)?
+                .parse::<Decimal>()
+                .map_err(|_| StatusCode::BAD_REQUEST)?
+        }
+        OrderType::Market => Decimal::ZERO, // Market orders don't have price
+    };
 
     // For now, we'll create a new order and process it
     let order = Order {
         id: req.order_id,
-        user_address: order.user_address,
-        market_id: order.market_id,
-        side: order.side,
-        order_type: order.order_type,
-        size: order.size,
-        price: order.price,
+        user_address: req.user_address,
+        market_id: req.market_id,
+        side: req.side,
+        order_type: req.order_type,
+        size: Decimal::from_str(&req.size).map_err(|_| StatusCode::BAD_REQUEST)?,
+        price: Some(price),
         filled_size: Decimal::ZERO,
         status: OrderStatus::Pending,
         created_at: chrono::Utc::now(),
         updated_at: chrono::Utc::now(),
-        expires_at: order.expires_at,
+        expires_at: req.expires_at,
     };
 
     // Submit order to matching engine

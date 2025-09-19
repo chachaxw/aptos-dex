@@ -139,6 +139,13 @@ pub struct FreezeTransactionPayload {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfirmOrderRequest {
+    pub user_address: String,
+    pub market_id: u64,
+    pub side: OrderSide,
+    pub order_type: OrderType,
+    pub size: String,
+    pub price: Option<String>,
+    pub expires_at: Option<DateTime<Utc>>,
     pub order_id: Uuid,
     pub signed_transaction_hash: String,
 }

@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
@@ -88,7 +87,7 @@ export function OrderBook({
 
   const fetchRecentTrades = useCallback(async () => {
     try {
-      const trades = await matchingEngine.getRecentTrades(marketId, 20);
+      const trades = await matchingEngine.getRecentTrades(marketId);
       setRecentTrades(trades);
     } catch (error) {
       console.error("Failed to fetch recent trades:", error);
@@ -114,10 +113,10 @@ export function OrderBook({
   }, [fetchOrderBook, fetchRecentTrades]);
 
   // Auto-refresh every 2 seconds
-  // useEffect(() => {
-  //   const interval = setInterval(fetchOrderBook, 2000);
-  //   return () => clearInterval(interval);
-  // }, [fetchOrderBook]);
+  useEffect(() => {
+    const interval = setInterval(fetchOrderBook, 2000);
+    return () => clearInterval(interval);
+  }, [fetchOrderBook]);
 
   // WebSocket connection for real-time updates
   useEffect(() => {
@@ -166,7 +165,7 @@ export function OrderBook({
         />
 
         {/* Content */}
-        <div className="relative z-10 flex w-full justify-between">
+        <div className="relative z-10 w-full grid grid-cols-3">
           <span
             className={cn(
               "font-mono",
@@ -175,10 +174,10 @@ export function OrderBook({
           >
             ${parseFloat(level.price).toFixed(market.decimals)}
           </span>
-          <span className="font-mono text-gray-600">
+          <span className="font-mono text-gray-600 text-end">
             {parseFloat(level.size).toFixed(3)}
           </span>
-          <span className="text-gray-400">{level.order_count}</span>
+          <span className="text-gray-400 text-end">{level.order_count}</span>
         </div>
       </div>
     );
@@ -258,27 +257,6 @@ export function OrderBook({
             />
           </Button>
         </div>
-
-        {/* Market Summary */}
-        {spread && midPrice && (
-          <div className="flex items-center space-x-4 text-sm">
-            <div className="flex items-center space-x-1">
-              <span className="text-gray-500">Mid:</span>
-              <span className="font-mono font-medium">
-                ${midPrice.toFixed(market.decimals)}
-              </span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <span className="text-gray-500">Spread:</span>
-              <span className="font-mono">
-                ${spread.absolute.toFixed(market.decimals)}
-              </span>
-              <span className="text-gray-400">
-                ({spread.percentage.toFixed(2)}%)
-              </span>
-            </div>
-          </div>
-        )}
       </CardHeader>
 
       <CardContent className="p-0">
@@ -292,10 +270,10 @@ export function OrderBook({
           <TabsContent value="book" className="mt-0">
             <div className="space-y-0">
               {/* Header */}
-              <div className="flex items-center justify-between px-2 py-2 text-xs font-medium text-gray-500 border-b">
+              <div className="grid grid-cols-3 items-center px-2 py-2 text-xs font-medium text-gray-500 border-b">
                 <span>Price (USD)</span>
-                <span>Size</span>
-                <span>Orders</span>
+                <span className="text-end">Size</span>
+                <span className="text-end">Orders</span>
               </div>
 
               {/* Asks (Sell Orders) */}
@@ -447,24 +425,6 @@ export function OrderBook({
             </div>
           </TabsContent>
         </Tabs>
-
-        {/* Quick Actions */}
-        <div className="p-4 border-t bg-gray-50 rounded-b-lg">
-          {midPrice && (
-            <div className="mt-2 flex justify-center">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  onPriceClick?.(midPrice.toFixed(market.decimals), "Buy")
-                }
-                className="text-xs"
-              >
-                Use Mid Price: ${midPrice.toFixed(market.decimals)}
-              </Button>
-            </div>
-          )}
-        </div>
       </CardContent>
     </Card>
   );

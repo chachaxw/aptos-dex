@@ -31,7 +31,7 @@ pub async fn deposit_funds(
             info!("Deposit successful for user {}: tx {}", req.user_address, tx_hash);
             
             // Wait for confirmation
-            if !state.aptos_client.wait_for_transaction_confirmation(&tx_hash, 10).await
+            if !state.aptos_client.wait_for_transaction_confirmation(&tx_hash, 3).await
                 .map_err(|e| {
                     error!("Failed to wait for deposit confirmation: {}", e);
                     StatusCode::INTERNAL_SERVER_ERROR

@@ -1,23 +1,23 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  X, 
-  Clock, 
-  CheckCircle, 
-  XCircle, 
-  TrendingUp, 
+import React, { useState, useEffect, useCallback } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  X,
+  Clock,
+  CheckCircle,
+  XCircle,
+  TrendingUp,
   TrendingDown,
   RefreshCw,
-  AlertCircle
-} from 'lucide-react';
-import { MatchingEngineClient, Order } from '@/lib/matching-engine-client';
-import { useToast } from '@/components/ui/use-toast';
-import { cn } from '@/lib/utils';
+  AlertCircle,
+} from "lucide-react";
+import { MatchingEngineClient, Order } from "@/lib/matching-engine-client";
+import { useToast } from "@/components/ui/use-toast";
+import { cn } from "@/lib/utils";
 
 interface UserOrdersProps {
   marketId: number;
@@ -27,44 +27,50 @@ interface UserOrdersProps {
 
 const ORDER_STATUS_CONFIG = {
   Pending: {
-    icon: Clock, 
-    color: 'text-yellow-600', 
-    bg: 'bg-yellow-50', 
-    label: 'Pending' 
+    icon: Clock,
+    color: "text-yellow-600",
+    bg: "bg-yellow-50",
+    label: "Pending",
   },
   PartiallyFilled: {
-    icon: TrendingUp, 
-    color: 'text-blue-600', 
-    bg: 'bg-blue-50', 
-    label: 'Partial' 
+    icon: TrendingUp,
+    color: "text-blue-600",
+    bg: "bg-blue-50",
+    label: "Partial",
   },
   Filled: {
-    icon: CheckCircle, 
-    color: 'text-green-600', 
-    bg: 'bg-green-50', 
-    label: 'Filled' 
-  },  
+    icon: CheckCircle,
+    color: "text-green-600",
+    bg: "bg-green-50",
+    label: "Filled",
+  },
   Cancelled: {
-    icon: XCircle, 
-    color: 'text-gray-600', 
-    bg: 'bg-gray-50', 
-    label: 'Cancelled' 
+    icon: XCircle,
+    color: "text-gray-600",
+    bg: "bg-gray-50",
+    label: "Cancelled",
   },
   Expired: {
-    icon: AlertCircle, 
-    color: 'text-red-600', 
-    bg: 'bg-red-50', 
-    label: 'Expired' 
+    icon: AlertCircle,
+    color: "text-red-600",
+    bg: "bg-red-50",
+    label: "Expired",
   },
 };
 
-export function UserOrders({ marketId, userAddress, className }: UserOrdersProps) {
+export function UserOrders({
+  marketId,
+  userAddress,
+  className,
+}: UserOrdersProps) {
   const { toast } = useToast();
   const [matchingEngine] = useState(() => new MatchingEngineClient());
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [cancellingOrders, setCancellingOrders] = useState<Set<string>>(new Set());
+  const [cancellingOrders, setCancellingOrders] = useState<Set<string>>(
+    new Set()
+  );
 
   const fetchOrders = useCallback(async () => {
     if (!userAddress) {
@@ -74,11 +80,16 @@ export function UserOrders({ marketId, userAddress, className }: UserOrdersProps
     }
 
     try {
-      const userOrders = await matchingEngine.getUserOrders(userAddress);
-      const filteredOrders = userOrders.filter(order => order.market_id === marketId);
+      const { orders: userOrders } = await matchingEngine.getUserOrders(
+        userAddress
+      );
+
+      const filteredOrders = userOrders.filter(
+        (order) => order.market_id === marketId
+      );
       setOrders(filteredOrders);
     } catch (error) {
-      console.error('Failed to fetch user orders:', error);
+      console.error("Failed to fetch user orders:", error);
       setOrders([]);
     }
     setIsLoading(false);
@@ -97,17 +108,17 @@ export function UserOrders({ marketId, userAddress, className }: UserOrdersProps
   // Auto-refresh every 10 seconds
   useEffect(() => {
     if (!userAddress) return;
-    
+
     const interval = setInterval(fetchOrders, 10000);
     return () => clearInterval(interval);
   }, [userAddress, marketId, fetchOrders]);
 
   const handleCancelOrder = async (orderId: string) => {
-    setCancellingOrders(prev => new Set(prev).add(orderId));
+    setCancellingOrders((prev) => new Set(prev).add(orderId));
 
     try {
       const success = await matchingEngine.cancelOrder(orderId);
-      
+
       if (success) {
         toast({
           title: "Order Cancelled",
@@ -115,11 +126,11 @@ export function UserOrders({ marketId, userAddress, className }: UserOrdersProps
         });
 
         // Update local state
-        setOrders(prev => prev.map(order => 
-          order.id === orderId 
-            ? { ...order, status: 'Cancelled' }
-            : order
-        ));
+        setOrders((prev) =>
+          prev.map((order) =>
+            order.id === orderId ? { ...order, status: "Cancelled" } : order
+          )
+        );
       } else {
         toast({
           title: "Cancellation Failed",
@@ -134,7 +145,7 @@ export function UserOrders({ marketId, userAddress, className }: UserOrdersProps
         variant: "destructive",
       });
     } finally {
-      setCancellingOrders(prev => {
+      setCancellingOrders((prev) => {
         const newSet = new Set(prev);
         newSet.delete(orderId);
         return newSet;
@@ -145,9 +156,10 @@ export function UserOrders({ marketId, userAddress, className }: UserOrdersProps
   const renderOrderRow = (order: Order) => {
     const statusConfig = ORDER_STATUS_CONFIG[order.status];
     const StatusIcon = statusConfig.icon;
-    const fillPercentage = (parseFloat(order.filled_size) / parseFloat(order.size)) * 100;
-    const isBuy = order.side === 'Buy';
-    const canCancel = ['Pending', 'PartiallyFilled'].includes(order.status);
+    const fillPercentage =
+      (parseFloat(order.filled_size) / parseFloat(order.size)) * 100;
+    const isBuy = order.side === "Buy";
+    const canCancel = ["Pending", "PartiallyFilled"].includes(order.status);
     const isCancelling = cancellingOrders.has(order.id);
 
     return (
@@ -162,7 +174,12 @@ export function UserOrders({ marketId, userAddress, className }: UserOrdersProps
             ) : (
               <TrendingDown className="w-4 h-4 text-red-600" />
             )}
-            <span className={cn("text-sm font-medium", isBuy ? "text-green-600" : "text-red-600")}>
+            <span
+              className={cn(
+                "text-sm font-medium",
+                isBuy ? "text-green-600" : "text-red-600"
+              )}
+            >
               {order.side.toUpperCase()}
             </span>
             <Badge variant="outline" className="text-xs">
@@ -173,12 +190,16 @@ export function UserOrders({ marketId, userAddress, className }: UserOrdersProps
           <div className="grid grid-cols-3 gap-2 text-xs text-gray-600">
             <div>
               <span>Size: </span>
-              <span className="font-mono">{parseFloat(order.size).toFixed(3)}</span>
+              <span className="font-mono">
+                {parseFloat(order.size).toFixed(3)}
+              </span>
             </div>
             <div>
               <span>Price: </span>
               <span className="font-mono">
-                {order.price ? `$${parseFloat(order.price).toFixed(2)}` : 'Market'}
+                {order.price
+                  ? `$${parseFloat(order.price).toFixed(2)}`
+                  : "Market"}
               </span>
             </div>
             <div>
@@ -191,7 +212,10 @@ export function UserOrders({ marketId, userAddress, className }: UserOrdersProps
           {fillPercentage > 0 && fillPercentage < 100 && (
             <div className="w-full bg-gray-200 rounded-full h-1.5">
               <div
-                className={cn("h-1.5 rounded-full", isBuy ? "bg-green-500" : "bg-red-500")}
+                className={cn(
+                  "h-1.5 rounded-full",
+                  isBuy ? "bg-green-500" : "bg-red-500"
+                )}
                 style={{ width: `${fillPercentage}%` }}
               />
             </div>
@@ -226,25 +250,29 @@ export function UserOrders({ marketId, userAddress, className }: UserOrdersProps
     );
   };
 
-  const activeOrders = orders.filter(order => ['Pending', 'PartiallyFilled'].includes(order.status));
-  const completedOrders = orders.filter(order => ['Filled', 'Cancelled', 'Expired'].includes(order.status));
+  const activeOrders = orders.filter((order) =>
+    ["Pending", "PartiallyFilled"].includes(order.status)
+  );
+  const completedOrders = orders.filter((order) =>
+    ["Filled", "Cancelled", "Expired"].includes(order.status)
+  );
 
   return (
     <Card className={className}>
-      <CardHeader>
+      <CardHeader className="px-3 py-2">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">Your Orders</CardTitle>
           <div className="flex items-center space-x-2">
-            <Badge variant="outline">
-              {orders.length} Total
-            </Badge>
+            <Badge variant="outline">{orders.length} Total</Badge>
             <Button
               variant="outline"
               size="sm"
               onClick={refreshOrders}
               disabled={isRefreshing}
             >
-              <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
+              <RefreshCw
+                className={cn("w-4 h-4", isRefreshing && "animate-spin")}
+              />
             </Button>
           </div>
         </div>
@@ -265,10 +293,12 @@ export function UserOrders({ marketId, userAddress, className }: UserOrdersProps
           <div className="text-center py-8 text-gray-500">
             {/* <Activity className="w-8 h-8 mx-auto mb-2 opacity-50" /> */}
             <p>No orders yet</p>
-            <p className="text-xs mt-1">Your orders will appear here after submission</p>
+            <p className="text-xs mt-1">
+              Your orders will appear here after submission
+            </p>
           </div>
         ) : (
-          <Tabs defaultValue="active" className="w-full">
+          <Tabs defaultValue="active" className="w-full px-3">
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="active" className="text-sm">
                 Active ({activeOrders.length})

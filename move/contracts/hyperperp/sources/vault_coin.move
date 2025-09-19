@@ -86,10 +86,11 @@ module hyperperp::vault_coin {
         // Update ledger
         debit(admin, to, amount);
 
+        account::sub_collateral(to, (amount as u64));
         // Transfer coins from admin to user
         let coins = coin::withdraw<CoinType>(admin, (amount as u64));
         coin::deposit<CoinType>(to, coins);
-        
+
         events::emit_withdraw(signer::address_of(admin), events::new_withdraw_event(to, (amount as u64)));
     }
 }
