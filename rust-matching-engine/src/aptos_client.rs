@@ -137,7 +137,7 @@ impl AptosClient {
         amount: u64,
         market_id: u64,
     ) -> Result<String> {
-        info!("Freezing funds for user {}: {} APT in market {}", user_address, amount, market_id);
+        info!("Freezing funds for user {}: {} USDC in market {}", user_address, amount, market_id);
 
         // 在测试环境中，我们模拟冻结操作
         // 使用配置文件中的 admin_address 作为测试地址
@@ -157,13 +157,13 @@ impl AptosClient {
             ModuleId::new(self.contract_address, "vault_coin".to_string()),
             "deposit".to_string(),
             vec![TypeTag::Struct(Box::new(StructTag {
-                address: self.contract_address,
-                module: "vault_coin".to_owned(),
+                address: AccountAddress::from_str("0x29b0681a76b20595201859a5d2b269ae9d1fe98251198cefa513c95267003c0c")?,
+                module: "mint_test_coin".to_owned(),
                 name: "Coin".to_owned(),
                 type_args: vec![],
-            }))], // USDC 代币类型参数
+            }))], // 使用外部测试币类型
             vec![
-                bcs::to_bytes(&amount)?,                    // amount
+                bcs::to_bytes(&(amount as u128))?,          // amount as u128
                 bcs::to_bytes(&self.contract_address)?,      // admin_addr
             ],
         ));
@@ -312,15 +312,7 @@ impl AptosClient {
         user_address: &str,
         amount: u64,
     ) -> Result<String> {
-        info!("Unfreezing funds for user {}: {} APT", user_address, amount);
-
-        // 在测试环境中，我们模拟解冻操作
-        // 使用配置文件中的 admin_address 作为测试地址
-        if user_address == self.admin_address.to_string() {
-            let mock_tx_hash = format!("mock_unfreeze_{}_{}", user_address, chrono::Utc::now().timestamp());
-            info!("Test environment: simulating fund unfreeze for user {}: tx {}", user_address, mock_tx_hash);
-            return Ok(mock_tx_hash);
-        }
+        info!("Unfreezing funds for user {}: {} USDC", user_address, amount);
 
         // 获取管理员账户信息（只有管理员可以执行提款）
         let resources = self.client.get_account_resources(self.admin_address.to_string()).await?;
@@ -333,14 +325,14 @@ impl AptosClient {
             ModuleId::new(self.contract_address, "vault_coin".to_owned()),
             "withdraw_for".to_owned(),
             vec![TypeTag::Struct(Box::new(StructTag {
-                address: self.contract_address,
-                module: "vault_coin".to_owned(),
+                address: AccountAddress::from_str("0x29b0681a76b20595201859a5d2b269ae9d1fe98251198cefa513c95267003c0c")?,
+                module: "mint_test_coin".to_owned(),
                 name: "Coin".to_owned(),
                 type_args: vec![],
-            }))], // USDC 代币类型参数
+            }))], // 使用外部测试币类型
             vec![
-                bcs::to_bytes(&user_addr)?,              // to
-                bcs::to_bytes(&amount)?,                 // amount
+                bcs::to_bytes(&user_addr)?,              // to (admin is implicit signer)
+                bcs::to_bytes(&(amount as u128))?,       // amount as u128
             ],
         ));
 

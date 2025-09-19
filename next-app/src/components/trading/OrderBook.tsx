@@ -87,7 +87,7 @@ export function OrderBook({
 
   const fetchRecentTrades = useCallback(async () => {
     try {
-      const trades = await matchingEngine.getRecentTrades(marketId, 20);
+      const trades = await matchingEngine.getRecentTrades(marketId);
       setRecentTrades(trades);
     } catch (error) {
       console.error("Failed to fetch recent trades:", error);

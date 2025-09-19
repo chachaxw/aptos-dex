@@ -156,7 +156,7 @@ pub async fn cancel_order(
                         info!("Funds unfrozen for user {}: tx {}", order_info.user_address, tx_hash);
                         
                         // 等待资金解冻确认
-                        if !state.aptos_client.wait_for_transaction_confirmation(&tx_hash, 10).await
+                        if !state.aptos_client.wait_for_transaction_confirmation(&tx_hash, 3).await
                             .map_err(|e| {
                                 error!("Failed to wait for unfreeze confirmation: {}", e);
                                 StatusCode::INTERNAL_SERVER_ERROR
@@ -335,7 +335,7 @@ pub async fn confirm_order(
         req.order_id, req.signed_transaction_hash);
 
     // Verify the transaction was successful
-    if !state.aptos_client.wait_for_transaction_confirmation(&req.signed_transaction_hash, 10).await
+    if !state.aptos_client.wait_for_transaction_confirmation(&req.signed_transaction_hash, 3).await
         .map_err(|e| {
             error!("Failed to verify transaction confirmation: {}", e);
             StatusCode::INTERNAL_SERVER_ERROR

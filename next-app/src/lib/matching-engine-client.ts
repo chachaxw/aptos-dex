@@ -149,11 +149,11 @@ export class MatchingEngineClient {
     return response.json();
   }
 
-  async getUserOrders(userAddress: string): Promise<Order[]> {
+  async getUserOrders(userAddress: string): Promise<{orders: Order[]}> {
     const response = await fetch(`${this.baseUrl}/orders/user/${userAddress}`);
-    
+
     if (!response.ok) {
-      return []; // Return empty array if endpoint doesn't exist yet
+      return {orders: []}; // Return empty array if endpoint doesn't exist yet
     }
 
     return response.json();

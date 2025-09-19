@@ -41,7 +41,7 @@ pub async fn get_user_orders(
     Path(user_address): Path<String>,
     Query(params): Query<UserOrdersQuery>,
 ) -> Result<Json<UserOrdersResponse>, StatusCode> {
-    info!("Querying orders for user: {}", user_address);
+    // info!("Querying orders for user: {}", user_address);
 
     // 验证用户地址格式（简单验证）
     if user_address.is_empty() || user_address.len() < 10 {
@@ -123,6 +123,6 @@ pub async fn get_user_trades(
         trades,
     };
 
-    info!("Retrieved {} trades for user {}", response.total, user_address);
+    // info!("Retrieved {} trades for user {}", response.total, user_address);
     Ok(Json(response))
 }
