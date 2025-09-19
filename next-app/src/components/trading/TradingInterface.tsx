@@ -75,7 +75,7 @@ export function TradingInterface() {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-2">
           {/* Left Column: Chart and Market Data */}
           <div className="lg:col-span-2 space-y-2">
-            <TradingChart marketId={selectedMarket} />
+            <TradingChart marketId={selectedMarket} className="h-full" />
           </div>
 
           {/* Middle Column: Order Book */}
