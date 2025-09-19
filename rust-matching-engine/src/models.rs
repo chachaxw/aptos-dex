@@ -108,6 +108,48 @@ pub struct OrderResponse {
     pub trades: Vec<Trade>,
 }
 
+// New models for User-Signed Freeze
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FreezeTransactionRequest {
+    pub user_address: String,
+    pub market_id: u64,
+    pub side: OrderSide,
+    pub order_type: OrderType,
+    pub size: String,
+    pub price: Option<String>,
+    pub expires_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FreezeTransactionResponse {
+    pub order_id: Uuid,
+    pub freeze_transaction_payload: FreezeTransactionPayload,
+    pub required_collateral: u64,
+    pub message: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FreezeTransactionPayload {
+    pub function: String,
+    pub type_arguments: Vec<String>,
+    pub arguments: Vec<String>,
+    pub gas_limit: u64,
+    pub gas_unit_price: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConfirmOrderRequest {
+    pub order_id: Uuid,
+    pub signed_transaction_hash: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConfirmOrderResponse {
+    pub order: Order,
+    pub trades: Vec<Trade>,
+    pub message: String,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OrderBookLevel {
     pub price: Decimal,

@@ -2,12 +2,11 @@
 
 import React, { useState } from "react";
 import { useWallet } from "@aptos-labs/wallet-adapter-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Activity, Wallet, BarChart3, Clock } from "lucide-react";
+import { Wallet } from "lucide-react";
 
-import { CreateOrder } from "./CreateOrder";
+import { OrderWithFreeze } from "./OrderWithFreeze";
 import { OrderBook } from "./OrderBook";
 import { UserOrders } from "./UserOrders";
 import { TradingChart } from "./TradingChart";
@@ -37,29 +36,15 @@ export function TradingInterface() {
   });
   const [lastActivity, setLastActivity] = useState<Date>(new Date());
 
-  const handleOrderSubmitted = (response: OrderResponse) => {
-    console.log("Order submitted:", response);
+  const handleOrderSubmitted = (orderId: string, txHash: string) => {
+    console.log("Order submitted:", orderId, txHash);
     setLastActivity(new Date());
 
     // Show success notification with trade details
-    if (response.trades.length > 0) {
-      const totalFilled = response.trades.reduce(
-        (sum, trade) => sum + parseFloat(trade.size),
-        0
-      );
-      const avgPrice =
-        response.trades.reduce(
-          (sum, trade) =>
-            sum + parseFloat(trade.price) * parseFloat(trade.size),
-          0
-        ) /
-        response.trades.reduce((sum, trade) => sum + parseFloat(trade.size), 0);
-
+    if (txHash) {
       toast({
         title: "Order Executed",
-        description: `Filled ${totalFilled.toFixed(3)} ${
-          MARKETS[selectedMarket as keyof typeof MARKETS].symbol.split("-")[0]
-        } @ $${avgPrice.toFixed(2)}`,
+        description: `Order ${orderId} executed with transaction hash ${txHash}`,
       });
     }
   };
@@ -119,10 +104,8 @@ export function TradingInterface() {
         {/* Right Column: Order Entry and Management */}
         <div className="space-y-2">
           <AccountBalance />
-          <CreateOrder
+          <OrderWithFreeze
             marketId={selectedMarket}
-            defaultSide={orderFormData.side}
-            defaultPrice={orderFormData.price}
             onOrderSubmitted={handleOrderSubmitted}
           />
           <DepositFunds onDepositSuccess={handleDepositSuccess} />

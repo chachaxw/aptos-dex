@@ -4,10 +4,10 @@
  */
 
 import { useWallet } from '@aptos-labs/wallet-adapter-react';
-import { AptosClient, TxnBuilderTypes, BCS } from 'aptos';
+import { AptosClient, AptosAccount } from 'aptos';
 
-const NODE_URL = process.env.NEXT_PUBLIC_APTOS_NODE_URL || 'https://fullnode.devnet.aptoslabs.com/v1';
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '0x95b011ec2dfc71780ec8bf5d4b229dee8de07d26f1867f50fd32cf3028a22e50';
+const NODE_URL = process.env.NEXT_PUBLIC_APTOS_NODE_URL || 'https://fullnode.testnet.aptoslabs.com/v1';
+const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '0x517206cb6757cc0723667a05afb9c05675341cd79570ba7cfb72f63241d55a2e';
 
 export interface DepositTransaction {
   transaction: string; // BCS-encoded transaction
@@ -44,13 +44,12 @@ export async function generateDepositTransaction(
   const sequenceNumber = parseInt((accountResource.data as any).sequence_number);
   
   // Get current timestamp
-  const state = await client.getState();
   const expirationTimestamp = Math.floor(Date.now() / 1000) + 30; // 30 seconds from now
   
   // Create deposit transaction payload
   const payload = {
     type: "entry_function_payload",
-    function: `${CONTRACT_ADDRESS}::vault::deposit`,
+    function: `${CONTRACT_ADDRESS}::vault_coin::deposit`,
     type_arguments: ["0x1::aptos_coin::AptosCoin"],
     arguments: [amount.toString(), CONTRACT_ADDRESS]
   };
@@ -60,30 +59,8 @@ export async function generateDepositTransaction(
   
   // Convert to BCS
   const bcsTxn = AptosClient.generateBCSTransaction(
-    new TxnBuilderTypes.RawTransaction(
-      new TxnBuilderTypes.AccountAddress(TxnBuilderTypes.hexToBytes(userAddress)),
-      BigInt(sequenceNumber),
-      new TxnBuilderTypes.TransactionPayloadEntryFunction(
-        new TxnBuilderTypes.EntryFunction(
-          new TxnBuilderTypes.ModuleId(
-            new TxnBuilderTypes.AccountAddress(TxnBuilderTypes.hexToBytes(CONTRACT_ADDRESS)),
-            new TxnBuilderTypes.Identifier("vault")
-          ),
-          new TxnBuilderTypes.Identifier("deposit"),
-          [new TxnBuilderTypes.TypeTagStruct(new TxnBuilderTypes.StructTag(
-            new TxnBuilderTypes.AccountAddress(TxnBuilderTypes.hexToBytes("0x1")),
-            new TxnBuilderTypes.Identifier("aptos_coin"),
-            new TxnBuilderTypes.Identifier("AptosCoin"),
-            []
-          ))],
-          [BCS.bcsToBytes(amount), BCS.bcsToBytes(CONTRACT_ADDRESS)]
-        )
-      ),
-      BigInt(100000), // max gas amount
-      BigInt(100), // gas unit price
-      BigInt(expirationTimestamp), // expiration timestamp
-      new TxnBuilderTypes.ChainId(1) // devnet chain ID
-    )
+    new AptosAccount(),
+    rawTxn
   );
   
   return {
@@ -101,7 +78,7 @@ export async function submitDepositTransaction(
   const client = new AptosClient(NODE_URL);
   
   // Submit the signed transaction
-  const response = await client.submitTransaction(signedTransaction);
+  const response = await client.submitTransaction(Uint8Array.from(signedTransaction));
   
   // Wait for confirmation
   await client.waitForTransaction(response.hash);

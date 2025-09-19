@@ -21,7 +21,7 @@ use crate::{
     config::Config,
     matching_engine::MatchingEngine,
     api::{
-        orders::{submit_order, cancel_order, get_order_book},
+        orders::{submit_order, cancel_order, get_order_book, request_freeze_transaction, confirm_order},
         health::health_check,
         markets::{get_market, get_all_markets},
         deposit::deposit_funds,
@@ -103,6 +103,8 @@ async fn main() -> Result<()> {
         .route("/orderbook/:market_id", get(get_order_book))
         .route("/markets", get(get_all_markets))
         .route("/markets/:market_id", get(get_market))
+        .route("/orders/freeze", post(request_freeze_transaction))
+        .route("/orders/confirm", post(confirm_order))
         .layer(CorsLayer::permissive())
         .with_state(state);
 

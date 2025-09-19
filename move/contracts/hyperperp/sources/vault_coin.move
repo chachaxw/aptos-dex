@@ -2,12 +2,10 @@ module hyperperp::vault_coin {
     use std::signer;
     use std::table;
     use hyperperp::errors;
-    use hyperperp::config;
     use hyperperp::account;
     use hyperperp::events;
     use aptos_framework::coin;
-    use aptos_framework::coin::Coin;
-
+    
     struct UsdcLedger has key { 
         balances: table::Table<address, u128> 
     }
@@ -19,8 +17,8 @@ module hyperperp::vault_coin {
 
     public fun balance_of(admin_addr: address, user: address): u128 acquires UsdcLedger {
         let l = borrow_global<UsdcLedger>(admin_addr);
-        if (table::contains<address, u128>(&l.balances, user)) { 
-            *table::borrow<address, u128>(&l.balances, user) 
+        if (l.balances.contains::<address, u128>(user)) { 
+            *l.balances.borrow::<address, u128>(user) 
         } else { 
             0u128 
         }
@@ -28,30 +26,30 @@ module hyperperp::vault_coin {
 
     public fun credit(admin: &signer, user: address, delta: u128) acquires UsdcLedger {
         let l = borrow_global_mut<UsdcLedger>(signer::address_of(admin));
-        let cur = if (table::contains<address, u128>(&l.balances, user)) { 
-            *table::borrow_mut<address, u128>(&mut l.balances, user) 
+        let cur = if (l.balances.contains::<address, u128>(user)) { 
+            *l.balances.borrow_mut::<address, u128>(user) 
         } else { 
             0u128 
         };
-        if (table::contains<address, u128>(&l.balances, user)) { 
-            *table::borrow_mut<address, u128>(&mut l.balances, user) = cur + delta 
+        if (l.balances.contains::<address, u128>(user)) { 
+            *l.balances.borrow_mut::<address, u128>(user) = cur + delta 
         } else { 
-            table::add<address, u128>(&mut l.balances, user, cur + delta) 
+            l.balances.add::<address, u128>(user, cur + delta) 
         };
     }
 
     public fun debit(admin: &signer, user: address, delta: u128) acquires UsdcLedger {
         let l = borrow_global_mut<UsdcLedger>(signer::address_of(admin));
-        let cur = if (table::contains<address, u128>(&l.balances, user)) { 
-            *table::borrow_mut<address, u128>(&mut l.balances, user) 
+        let cur = if (l.balances.contains::<address, u128>(user)) { 
+            *l.balances.borrow_mut::<address, u128>(user) 
         } else { 
             0u128 
         };
         assert!(cur >= delta, errors::e_insufficient_margin());
-        if (table::contains<address, u128>(&l.balances, user)) { 
-            *table::borrow_mut<address, u128>(&mut l.balances, user) = cur - delta 
+        if (l.balances.contains::<address, u128>(user)) { 
+            *l.balances.borrow_mut::<address, u128>(user) = cur - delta 
         } else { 
-            table::add<address, u128>(&mut l.balances, user, 0u128) 
+            l.balances.add::<address, u128>(user, 0u128) 
         };
     }
 
@@ -68,15 +66,15 @@ module hyperperp::vault_coin {
         // Update ledger
         let l = borrow_global_mut<UsdcLedger>(admin_addr);
         let u = signer::address_of(user);
-        let cur = if (table::contains<address, u128>(&l.balances, u)) { 
-            *table::borrow_mut<address, u128>(&mut l.balances, u) 
+        let cur = if (l.balances.contains::<address, u128>(u)) { 
+            *l.balances.borrow_mut::<address, u128>(u) 
         } else { 
             0u128 
         };
-        if (table::contains<address, u128>(&l.balances, u)) { 
-            *table::borrow_mut<address, u128>(&mut l.balances, u) = cur + amount 
+        if (l.balances.contains::<address, u128>(u)) { 
+            *l.balances.borrow_mut::<address, u128>(u) = cur + amount 
         } else { 
-            table::add<address, u128>(&mut l.balances, u, cur + amount) 
+            l.balances.add::<address, u128>(u, cur + amount) 
         };
         
         // Update user collateral
