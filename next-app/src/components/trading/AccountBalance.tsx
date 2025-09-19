@@ -112,11 +112,8 @@ export default function AccountBalance({ className }: AccountBalanceProps) {
           <>
             {/* Total Balance */}
             <div className="text-center">
-              <div className="text-3xl font-bold font-mono">
-                {formatCurrency(balance.total)}
-              </div>
-              <div className="text-sm text-gray-600 mt-1">
-                {formatCurrency(balance.apt.apt, 'APT')}
+              <div className="text-xl font-bold font-mono">
+                {formatCurrency(balance.apt.apt, 'USDC')}
               </div>
               <div className="flex items-center justify-center space-x-2 mt-2">
                 {balance.pnl >= 0 ? (

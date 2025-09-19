@@ -1,4 +1,4 @@
-const APTOS_COIN = "0x1::aptos_coin::AptosCoin";
+const APTOS_COIN = "0x29b0681a76b20595201859a5d2b269ae9d1fe98251198cefa513c95267003c0c::mint_test_coin::Coin";
 
 export interface AptosBalance {
   apt: number;
@@ -25,9 +25,9 @@ export async function fetchAptBalance(address: string): Promise<number> {
       throw new Error(`Failed to fetch balance: ${response.status}`);
     }
 
-    const data: { data: AccountResources } = await response.json();
-    const octas = parseInt(data.data.coin.value);
-    return octas / 1e8; // Convert from octas to APT
+    const data = await response.json();
+    const octas = parseInt(data);
+    return octas / 1e6; // Convert from octas to APT
   } catch (error) {
     console.error('Error fetching APT balance:', error);
     throw error;
@@ -68,9 +68,13 @@ export async function getAccountBalance(address: string): Promise<AptosBalance> 
 /**
  * Format currency values
  */
-export function formatCurrency(amount: number, currency: 'USD' | 'APT' = 'USD'): string {
+export function formatCurrency(amount: number, currency: 'USD' | 'APT' | 'USDC' = 'USD'): string {
   if (currency === 'APT') {
     return `${amount.toFixed(4)} APT`;
+  }
+
+  if (currency === 'USDC') {
+    return `${amount.toFixed(6)} USDC`;
   }
   
   return new Intl.NumberFormat('en-US', {
