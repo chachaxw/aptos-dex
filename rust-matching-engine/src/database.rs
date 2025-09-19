@@ -382,4 +382,156 @@ impl Database {
         debug!("Retrieved order: {}", order.id);
         Ok(order)
     }
+
+    pub async fn get_orders_by_user(
+        &self, 
+        user_address: &str, 
+        status_filter: Option<&str>,
+        limit: Option<i64>,
+        offset: Option<i64>
+    ) -> Result<Vec<Order>> {
+        let mut query = String::from(
+            r#"
+            SELECT id, user_address, market_id, side, order_type, 
+                   CAST(size AS TEXT) as size, CAST(price AS TEXT) as price, 
+                   CAST(filled_size AS TEXT) as filled_size, status, created_at, 
+                   updated_at, expires_at
+            FROM orders 
+            WHERE user_address = $1
+            "#
+        );
+        
+        let mut param_count = 1;
+        
+        if let Some(status) = status_filter {
+            query.push_str(&format!(" AND status = ${}", param_count + 1));
+            param_count += 1;
+        }
+        
+        query.push_str(" ORDER BY created_at DESC");
+        
+        if let Some(limit_val) = limit {
+            query.push_str(&format!(" LIMIT ${}", param_count + 1));
+            param_count += 1;
+        }
+        
+        if let Some(offset_val) = offset {
+            query.push_str(&format!(" OFFSET ${}", param_count + 1));
+        }
+
+        let mut sqlx_query = sqlx::query(&query)
+            .bind(user_address);
+            
+        if let Some(status) = status_filter {
+            sqlx_query = sqlx_query.bind(status);
+        }
+        
+        if let Some(limit_val) = limit {
+            sqlx_query = sqlx_query.bind(limit_val);
+        }
+        
+        if let Some(offset_val) = offset {
+            sqlx_query = sqlx_query.bind(offset_val);
+        }
+
+        let rows = sqlx_query.fetch_all(&self.pool).await?;
+
+        let orders: Vec<Order> = rows.into_iter().map(|row| Order {
+            id: row.get("id"),
+            user_address: row.get("user_address"),
+            market_id: row.get::<i64, _>("market_id") as u64,
+            side: row.get("side"),
+            order_type: row.get("order_type"),
+            size: Self::string_to_decimal(row.get::<&str, _>("size")),
+            price: row.get::<Option<&str>, _>("price").map(|p| Self::string_to_decimal(p)),
+            filled_size: Self::string_to_decimal(row.get::<&str, _>("filled_size")),
+            status: row.get("status"),
+            created_at: row.get("created_at"),
+            updated_at: row.get("updated_at"),
+            expires_at: row.get("expires_at"),
+        }).collect();
+
+        debug!("Retrieved {} orders for user {}", orders.len(), user_address);
+        Ok(orders)
+    }
+
+    pub async fn get_trades_by_user(
+        &self, 
+        user_address: &str,
+        start_time: Option<chrono::DateTime<chrono::Utc>>,
+        end_time: Option<chrono::DateTime<chrono::Utc>>,
+        limit: Option<i64>,
+        offset: Option<i64>
+    ) -> Result<Vec<Trade>> {
+        let mut query = String::from(
+            r#"
+            SELECT id, market_id, taker_order_id, maker_order_id,
+                   taker_address, maker_address, CAST(size AS TEXT) as size, 
+                   CAST(price AS TEXT) as price, side, created_at, settlement_batch_id
+            FROM trades 
+            WHERE (taker_address = $1 OR maker_address = $1)
+            "#
+        );
+        
+        let mut param_count = 1;
+        
+        if let Some(start) = start_time {
+            query.push_str(&format!(" AND created_at >= ${}", param_count + 1));
+            param_count += 1;
+        }
+        
+        if let Some(end) = end_time {
+            query.push_str(&format!(" AND created_at <= ${}", param_count + 1));
+            param_count += 1;
+        }
+        
+        query.push_str(" ORDER BY created_at DESC");
+        
+        if let Some(limit_val) = limit {
+            query.push_str(&format!(" LIMIT ${}", param_count + 1));
+            param_count += 1;
+        }
+        
+        if let Some(offset_val) = offset {
+            query.push_str(&format!(" OFFSET ${}", param_count + 1));
+        }
+
+        let mut sqlx_query = sqlx::query(&query)
+            .bind(user_address);
+            
+        if let Some(start) = start_time {
+            sqlx_query = sqlx_query.bind(start);
+        }
+        
+        if let Some(end) = end_time {
+            sqlx_query = sqlx_query.bind(end);
+        }
+        
+        if let Some(limit_val) = limit {
+            sqlx_query = sqlx_query.bind(limit_val);
+        }
+        
+        if let Some(offset_val) = offset {
+            sqlx_query = sqlx_query.bind(offset_val);
+        }
+
+        let rows = sqlx_query.fetch_all(&self.pool).await?;
+
+        let trades: Vec<Trade> = rows.into_iter().map(|row| Trade {
+            id: row.get("id"),
+            market_id: row.get::<i64, _>("market_id") as u64,
+            taker_order_id: row.get("taker_order_id"),
+            maker_order_id: row.get("maker_order_id"),
+            taker_address: row.get("taker_address"),
+            maker_address: row.get("maker_address"),
+            size: Self::string_to_decimal(row.get::<&str, _>("size")),
+            price: Self::string_to_decimal(row.get::<&str, _>("price")),
+            side: row.get("side"),
+            created_at: row.get("created_at"),
+            settlement_batch_id: row.get("settlement_batch_id"),
+        }).collect();
+
+        debug!("Retrieved {} trades for user {}", trades.len(), user_address);
+        Ok(trades)
+    }
 }
