@@ -1,42 +1,54 @@
-'use client';
+"use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  RefreshCw, 
+import React, { useState, useEffect, useCallback } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
+import {
+  TrendingUp,
+  TrendingDown,
+  RefreshCw,
   Activity,
   ArrowUp,
   ArrowDown,
-  Zap
-} from 'lucide-react';
-import { MatchingEngineClient, OrderBook as OrderBookData, OrderBookLevel, Trade } from '@/lib/matching-engine-client';
-import { cn } from '@/lib/utils';
+  Zap,
+} from "lucide-react";
+import {
+  MatchingEngineClient,
+  OrderBook as OrderBookData,
+  OrderBookLevel,
+  Trade,
+} from "@/lib/matching-engine-client";
+import { cn } from "@/lib/utils";
 
 interface OrderBookProps {
   marketId?: number;
-  onPriceClick?: (price: string, side: 'buy' | 'sell') => void;
   className?: string;
+  onPriceClick?: (price: string, side: "Buy" | "Sell") => void;
 }
 
 const MARKETS = {
-  1: { symbol: 'BTC-USD', decimals: 2 },
-  2: { symbol: 'ETH-USD', decimals: 2 },
-  3: { symbol: 'SOL-USD', decimals: 3 },
+  1: { symbol: "BTC-USDC", decimals: 2 },
+  2: { symbol: "ETH-USDC", decimals: 2 },
+  3: { symbol: "SOL-USDC", decimals: 3 },
 };
 
-export function OrderBook({ marketId = 1, onPriceClick, className }: OrderBookProps) {
+export function OrderBook({
+  marketId = 1,
+  onPriceClick,
+  className,
+}: OrderBookProps) {
   const [matchingEngine] = useState(() => new MatchingEngineClient());
   const [orderBook, setOrderBook] = useState<OrderBookData | null>(null);
   const [recentTrades, setRecentTrades] = useState<Trade[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [spread, setSpread] = useState<{ absolute: number; percentage: number } | null>(null);
+  const [spread, setSpread] = useState<{
+    absolute: number;
+    percentage: number;
+  } | null>(null);
   const [midPrice, setMidPrice] = useState<number | null>(null);
 
   const market = MARKETS[marketId as keyof typeof MARKETS];
@@ -63,7 +75,7 @@ export function OrderBook({ marketId = 1, onPriceClick, className }: OrderBookPr
       const data = await matchingEngine.getOrderBook(marketId);
       setOrderBook(data);
     } catch (error) {
-      console.error('Failed to fetch order book:', error);
+      console.error("Failed to fetch order book:", error);
       // Set empty order book on error
       setOrderBook({
         market_id: marketId,
@@ -79,7 +91,7 @@ export function OrderBook({ marketId = 1, onPriceClick, className }: OrderBookPr
       const trades = await matchingEngine.getRecentTrades(marketId, 20);
       setRecentTrades(trades);
     } catch (error) {
-      console.error('Failed to fetch recent trades:', error);
+      console.error("Failed to fetch recent trades:", error);
       setRecentTrades([]);
     }
   }, [matchingEngine, marketId]);
@@ -102,10 +114,10 @@ export function OrderBook({ marketId = 1, onPriceClick, className }: OrderBookPr
   }, [fetchOrderBook, fetchRecentTrades]);
 
   // Auto-refresh every 2 seconds
-  useEffect(() => {
-    const interval = setInterval(fetchOrderBook, 2000);
-    return () => clearInterval(interval);
-  }, [fetchOrderBook]);
+  // useEffect(() => {
+  //   const interval = setInterval(fetchOrderBook, 2000);
+  //   return () => clearInterval(interval);
+  // }, [fetchOrderBook]);
 
   // WebSocket connection for real-time updates
   useEffect(() => {
@@ -117,7 +129,7 @@ export function OrderBook({ marketId = 1, onPriceClick, className }: OrderBookPr
       },
       (trade) => {
         if (trade.market_id === marketId) {
-          setRecentTrades(prev => [trade, ...prev.slice(0, 19)]);
+          setRecentTrades((prev) => [trade, ...prev.slice(0, 19)]);
         }
       }
     );
@@ -127,10 +139,14 @@ export function OrderBook({ marketId = 1, onPriceClick, className }: OrderBookPr
     };
   }, [matchingEngine, marketId]);
 
-  const renderOrderBookLevel = (level: OrderBookLevel, side: 'bid' | 'ask', maxSize: number) => {
+  const renderOrderBookLevel = (
+    level: OrderBookLevel,
+    side: "bid" | "ask",
+    maxSize: number
+  ) => {
     const sizePercentage = (parseFloat(level.size) / maxSize) * 100;
-    const isBid = side === 'bid';
-    
+    const isBid = side === "bid";
+
     return (
       <div
         key={level.price}
@@ -138,7 +154,7 @@ export function OrderBook({ marketId = 1, onPriceClick, className }: OrderBookPr
           "relative flex items-center justify-between px-2 py-1 text-xs cursor-pointer hover:bg-gray-50 transition-colors",
           isBid ? "hover:bg-green-50" : "hover:bg-red-50"
         )}
-        onClick={() => onPriceClick?.(level.price, isBid ? 'buy' : 'sell')}
+        onClick={() => onPriceClick?.(level.price, isBid ? "Buy" : "Sell")}
       >
         {/* Size bar background */}
         <div
@@ -148,25 +164,28 @@ export function OrderBook({ marketId = 1, onPriceClick, className }: OrderBookPr
           )}
           style={{ width: `${sizePercentage}%` }}
         />
-        
+
         {/* Content */}
         <div className="relative z-10 flex w-full justify-between">
-          <span className={cn("font-mono", isBid ? "text-green-600" : "text-red-600")}>
+          <span
+            className={cn(
+              "font-mono",
+              isBid ? "text-green-600" : "text-red-600"
+            )}
+          >
             ${parseFloat(level.price).toFixed(market.decimals)}
           </span>
           <span className="font-mono text-gray-600">
             {parseFloat(level.size).toFixed(3)}
           </span>
-          <span className="text-gray-400">
-            {level.order_count}
-          </span>
+          <span className="text-gray-400">{level.order_count}</span>
         </div>
       </div>
     );
   };
 
   const renderTradeItem = (trade: Trade, index: number) => {
-    const isBuyerTaker = trade.side === 'buy';
+    const isBuyerTaker = trade.side === "Buy";
     const timeAgo = new Date(trade.created_at).toLocaleTimeString();
 
     return (
@@ -183,16 +202,19 @@ export function OrderBook({ marketId = 1, onPriceClick, className }: OrderBookPr
           ) : (
             <ArrowDown className="w-3 h-3 text-red-500" />
           )}
-          <span className={cn("font-mono", isBuyerTaker ? "text-green-600" : "text-red-600")}>
+          <span
+            className={cn(
+              "font-mono",
+              isBuyerTaker ? "text-green-600" : "text-red-600"
+            )}
+          >
             ${parseFloat(trade.price).toFixed(market.decimals)}
           </span>
         </div>
         <span className="font-mono text-gray-600">
           {parseFloat(trade.size).toFixed(3)}
         </span>
-        <span className="text-gray-400 text-xs">
-          {timeAgo}
-        </span>
+        <span className="text-gray-400 text-xs">{timeAgo}</span>
       </div>
     );
   };
@@ -212,8 +234,12 @@ export function OrderBook({ marketId = 1, onPriceClick, className }: OrderBookPr
     );
   }
 
-  const maxBidSize = Math.max(...(orderBook?.bids.map(b => parseFloat(b.size)) || [0]));
-  const maxAskSize = Math.max(...(orderBook?.asks.map(a => parseFloat(a.size)) || [0]));
+  const maxBidSize = Math.max(
+    ...(orderBook?.bids.map((b) => parseFloat(b.size)) || [0])
+  );
+  const maxAskSize = Math.max(
+    ...(orderBook?.asks.map((a) => parseFloat(a.size)) || [0])
+  );
   const maxSize = Math.max(maxBidSize, maxAskSize);
 
   return (
@@ -221,33 +247,35 @@ export function OrderBook({ marketId = 1, onPriceClick, className }: OrderBookPr
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">{market.symbol} Order Book</CardTitle>
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={refreshData}
-              disabled={isRefreshing}
-            >
-              <RefreshCw className={cn("w-4 h-4", isRefreshing && "animate-spin")} />
-            </Button>
-            <Badge variant="outline">
-              <Activity className="w-3 h-3 mr-1" />
-              Live
-            </Badge>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={refreshData}
+            disabled={isRefreshing}
+          >
+            <RefreshCw
+              className={cn("w-4 h-4", isRefreshing && "animate-spin")}
+            />
+          </Button>
         </div>
-        
+
         {/* Market Summary */}
         {spread && midPrice && (
           <div className="flex items-center space-x-4 text-sm">
             <div className="flex items-center space-x-1">
               <span className="text-gray-500">Mid:</span>
-              <span className="font-mono font-medium">${midPrice.toFixed(market.decimals)}</span>
+              <span className="font-mono font-medium">
+                ${midPrice.toFixed(market.decimals)}
+              </span>
             </div>
             <div className="flex items-center space-x-1">
               <span className="text-gray-500">Spread:</span>
-              <span className="font-mono">${spread.absolute.toFixed(market.decimals)}</span>
-              <span className="text-gray-400">({spread.percentage.toFixed(2)}%)</span>
+              <span className="font-mono">
+                ${spread.absolute.toFixed(market.decimals)}
+              </span>
+              <span className="text-gray-400">
+                ({spread.percentage.toFixed(2)}%)
+              </span>
             </div>
           </div>
         )}
@@ -272,9 +300,9 @@ export function OrderBook({ marketId = 1, onPriceClick, className }: OrderBookPr
 
               {/* Asks (Sell Orders) */}
               <div className="space-y-0">
-                {orderBook?.asks.slice(0, 10).map((level) =>
-                  renderOrderBookLevel(level, 'ask', maxSize)
-                )}
+                {orderBook?.asks
+                  .slice(0, 10)
+                  .map((level) => renderOrderBookLevel(level, "ask", maxSize))}
               </div>
 
               {/* Spread Indicator */}
@@ -283,7 +311,8 @@ export function OrderBook({ marketId = 1, onPriceClick, className }: OrderBookPr
                   <div className="text-center">
                     <div className="text-xs text-gray-500">Spread</div>
                     <div className="font-mono text-sm font-medium">
-                      ${spread.absolute.toFixed(market.decimals)} ({spread.percentage.toFixed(2)}%)
+                      ${spread.absolute.toFixed(market.decimals)} (
+                      {spread.percentage.toFixed(2)}%)
                     </div>
                   </div>
                 </div>
@@ -291,9 +320,9 @@ export function OrderBook({ marketId = 1, onPriceClick, className }: OrderBookPr
 
               {/* Bids (Buy Orders) */}
               <div className="space-y-0">
-                {orderBook?.bids.slice(0, 10).map((level) =>
-                  renderOrderBookLevel(level, 'bid', maxSize)
-                )}
+                {orderBook?.bids
+                  .slice(0, 10)
+                  .map((level) => renderOrderBookLevel(level, "bid", maxSize))}
               </div>
             </div>
           </TabsContent>
@@ -311,7 +340,9 @@ export function OrderBook({ marketId = 1, onPriceClick, className }: OrderBookPr
               {/* Recent Trades */}
               <div className="max-h-96 overflow-y-auto">
                 {recentTrades.length > 0 ? (
-                  recentTrades.map((trade, index) => renderTradeItem(trade, index))
+                  recentTrades.map((trade, index) =>
+                    renderTradeItem(trade, index)
+                  )
                 ) : (
                   <div className="flex items-center justify-center py-8 text-gray-500">
                     <div className="text-center">
@@ -329,7 +360,7 @@ export function OrderBook({ marketId = 1, onPriceClick, className }: OrderBookPr
               {/* Depth Chart Visualization */}
               <div className="space-y-2">
                 <h4 className="text-sm font-medium">Market Depth</h4>
-                
+
                 {/* Asks Depth */}
                 <div className="space-y-1">
                   <div className="text-xs text-gray-500 flex items-center">
@@ -341,10 +372,15 @@ export function OrderBook({ marketId = 1, onPriceClick, className }: OrderBookPr
                     return (
                       <div key={level.price} className="space-y-1">
                         <div className="flex justify-between text-xs">
-                          <span>${parseFloat(level.price).toFixed(market.decimals)}</span>
+                          <span>
+                            ${parseFloat(level.price).toFixed(market.decimals)}
+                          </span>
                           <span>{parseFloat(level.size).toFixed(3)}</span>
                         </div>
-                        <Progress value={percentage} className="h-1 bg-red-100" />
+                        <Progress
+                          value={percentage}
+                          className="h-1 bg-red-100"
+                        />
                       </div>
                     );
                   })}
@@ -361,10 +397,15 @@ export function OrderBook({ marketId = 1, onPriceClick, className }: OrderBookPr
                     return (
                       <div key={level.price} className="space-y-1">
                         <div className="flex justify-between text-xs">
-                          <span>${parseFloat(level.price).toFixed(market.decimals)}</span>
+                          <span>
+                            ${parseFloat(level.price).toFixed(market.decimals)}
+                          </span>
                           <span>{parseFloat(level.size).toFixed(3)}</span>
                         </div>
-                        <Progress value={percentage} className="h-1 bg-green-100" />
+                        <Progress
+                          value={percentage}
+                          className="h-1 bg-green-100"
+                        />
                       </div>
                     );
                   })}
@@ -378,22 +419,30 @@ export function OrderBook({ marketId = 1, onPriceClick, className }: OrderBookPr
                   <div>
                     <span className="text-gray-500">Total Bids:</span>
                     <span className="ml-1 font-mono">
-                      {orderBook?.bids.reduce((sum, bid) => sum + parseFloat(bid.size), 0).toFixed(3) || '0'}
+                      {orderBook?.bids
+                        .reduce((sum, bid) => sum + parseFloat(bid.size), 0)
+                        .toFixed(3) || "0"}
                     </span>
                   </div>
                   <div>
                     <span className="text-gray-500">Total Asks:</span>
                     <span className="ml-1 font-mono">
-                      {orderBook?.asks.reduce((sum, ask) => sum + parseFloat(ask.size), 0).toFixed(3) || '0'}
+                      {orderBook?.asks
+                        .reduce((sum, ask) => sum + parseFloat(ask.size), 0)
+                        .toFixed(3) || "0"}
                     </span>
                   </div>
                   <div>
                     <span className="text-gray-500">Bid Orders:</span>
-                    <span className="ml-1 font-mono">{orderBook?.bids.length || 0}</span>
+                    <span className="ml-1 font-mono">
+                      {orderBook?.bids.length || 0}
+                    </span>
                   </div>
                   <div>
                     <span className="text-gray-500">Ask Orders:</span>
-                    <span className="ml-1 font-mono">{orderBook?.asks.length || 0}</span>
+                    <span className="ml-1 font-mono">
+                      {orderBook?.asks.length || 0}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -406,9 +455,14 @@ export function OrderBook({ marketId = 1, onPriceClick, className }: OrderBookPr
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2 text-xs text-gray-500">
               <Zap className="w-3 h-3" />
-              <span>Last updated: {orderBook ? new Date(orderBook.last_updated).toLocaleTimeString() : 'Never'}</span>
+              <span>
+                Last updated:{" "}
+                {orderBook
+                  ? new Date(orderBook.last_updated).toLocaleTimeString()
+                  : "Never"}
+              </span>
             </div>
-            
+
             {spread && (
               <Badge variant="outline" className="text-xs">
                 Spread: {spread.percentage.toFixed(2)}%
@@ -421,7 +475,9 @@ export function OrderBook({ marketId = 1, onPriceClick, className }: OrderBookPr
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => onPriceClick?.(midPrice.toFixed(market.decimals), 'buy')}
+                onClick={() =>
+                  onPriceClick?.(midPrice.toFixed(market.decimals), "Buy")
+                }
                 className="text-xs"
               >
                 Use Mid Price: ${midPrice.toFixed(market.decimals)}

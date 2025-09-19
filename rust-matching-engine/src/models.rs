@@ -132,3 +132,16 @@ pub struct MarketData {
     pub high_24h: Option<Decimal>,
     pub low_24h: Option<Decimal>,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DepositRequest {
+    pub user_address: String,
+    pub amount: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DepositResponse {
+    pub transaction_hash: String,
+    pub amount: u64,
+    pub user_address: String,
+}

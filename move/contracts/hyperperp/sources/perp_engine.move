@@ -112,7 +112,7 @@ module hyperperp::perp_engine {
     ) {
         let fill = new_batch_fill(taker, maker, market_id, size, price_x, fee_bps, ts);
         let fills = vector::empty<BatchFill>();
-        vector::push_back(&mut fills, fill);
+        fills.push_back(fill);
         let batch = new_settlement_batch(fills, oracle_ts, min_px, max_px, expiry);
         apply_batch(admin, batch, events_addr);
     }

@@ -438,6 +438,50 @@ impl AptosClient {
         let state = self.client.get_state().await?;
         Ok(state.timestamp_usecs / 1000 / 1000 + 30) // 30秒后过期
     }
+
+    // ==================== 功能4: 用户存款 ====================
+    
+    /// 用户存款到HyperPerp金库
+    pub async fn deposit_funds(
+        &self,
+        user_address: &str,
+        amount: u64,
+    ) -> Result<String> {
+        info!("Depositing {} APT for user {}", amount, user_address);
+
+        // 获取用户账户信息
+        let resources = self.client.get_account_resources(user_address.to_string()).await?;
+        let sequence_number = self.get_sequence_number(&resources.into_inner())?;
+
+        let user_addr = AccountAddress::from_str(user_address)?;
+
+        // 创建存款交易载荷 - 调用vault::deposit
+        let payload = TransactionPayload::EntryFunction(EntryFunction::new(
+            ModuleId::new(self.contract_address, "vault".to_string()),
+            "deposit".to_string(),
+            vec![], // 类型参数
+            vec![
+                bcs::to_bytes(&amount)?,                  // amount
+                bcs::to_bytes(&self.contract_address)?,   // cfg_addr
+            ],
+        ));
+
+        // 创建原始交易
+        let raw_txn = RawTransaction::new(
+            user_addr,
+            sequence_number,
+            payload,
+            100_000, // gas limit
+            100,     // gas unit price
+            self.get_expiration_timestamp().await?,
+            self.chain_id,
+        );
+
+        // 签名并提交
+        let tx_hash = self.sign_and_submit_transaction(raw_txn).await?;
+        info!("Deposit transaction submitted: tx {}", tx_hash);
+        Ok(tx_hash)
+    }
 }
 
 #[derive(Debug, Clone, serde::Serialize)]

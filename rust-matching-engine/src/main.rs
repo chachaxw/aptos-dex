@@ -24,6 +24,7 @@ use crate::{
         orders::{submit_order, cancel_order, get_order_book},
         health::health_check,
         markets::{get_market, get_all_markets},
+        deposit::deposit_funds,
     },
     database::Database,
     aptos_client::AptosClient,
@@ -96,6 +97,7 @@ async fn main() -> Result<()> {
     // Build router
     let app = Router::new()
         .route("/health", get(health_check))
+        .route("/deposit", post(deposit_funds))
         .route("/orders", post(submit_order))
         .route("/orders/:order_id", post(cancel_order))
         .route("/orderbook/:market_id", get(get_order_book))
