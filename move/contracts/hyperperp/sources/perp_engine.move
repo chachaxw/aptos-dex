@@ -82,7 +82,7 @@ module hyperperp::perp_engine {
             apply_fill(f.maker, f.market_id, f.size, f.price_x, false, events_addr); // maker goes short
 
             // Quote settlement within pooled FA ledger (USDC)
-            let quote_delta: u128 = (f.size * (f.price_x as u128));
+            let quote_delta: u128 = (f.size * (f.price_x as u128)) / (constants::px_scale() as u128);
             vfa::transfer_internal(admin, f.taker, f.maker, quote_delta);
 
             // Collect fees to vault (placeholder)

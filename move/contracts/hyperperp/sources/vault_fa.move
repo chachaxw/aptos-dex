@@ -3,6 +3,8 @@ module hyperperp::vault_fa {
     use std::table;
     use hyperperp::errors;
     use hyperperp::config;
+    use hyperperp::account;
+    use hyperperp::events;
     use aptos_framework::primary_fungible_store as pfs;
     use aptos_framework::fungible_asset::Metadata;
     use aptos_framework::object;
@@ -44,6 +46,10 @@ module hyperperp::vault_fa {
         let u = signer::address_of(user);
         let cur = if (table::contains<address, u128>(&l.balances, u)) { *table::borrow_mut<address, u128>(&mut l.balances, u) } else { 0u128 };
         if (table::contains<address, u128>(&l.balances, u)) { *table::borrow_mut<address, u128>(&mut l.balances, u) = cur + amount } else { table::add<address, u128>(&mut l.balances, u, cur + amount) };
+        
+        // Update user collateral
+        account::add_collateral(u, (amount as u64));
+        events::emit_deposit(admin_addr, events::new_deposit_event(u, (amount as u64)));
     }
 
     public entry fun withdraw_for(admin: &signer, to: address, amount: u128) acquires UsdcLedger {
