@@ -31,6 +31,7 @@ pub struct AptosClient {
     admin_address: AccountAddress,
     contract_address: AccountAddress,
     chain_id: ChainId,
+    usdc_token_type: String,
 }
 
 impl AptosClient {
@@ -76,6 +77,7 @@ impl AptosClient {
             admin_address,
             contract_address,
             chain_id,
+            usdc_token_type: config.usdc_token_type.clone(),
         };
 
         info!("Aptos client initialized for admin: {}", aptos_client.admin_address);
@@ -155,14 +157,14 @@ impl AptosClient {
         let resources = self.client.get_account_resources(user_address.to_string()).await?;
         let sequence_number = self.get_sequence_number(&resources.into_inner())?;
 
-        // 创建冻结资金的交易载荷 - 调用vault_fa::deposit
+        // 创建冻结资金的交易载荷 - 调用vault_coin::deposit
         let payload = TransactionPayload::EntryFunction(EntryFunction::new(
-            ModuleId::new(self.contract_address, "vault_fa".to_string()),
+            ModuleId::new(self.contract_address, "vault_coin".to_string()),
             "deposit".to_string(),
-            vec![], // 类型参数
+            vec![self.usdc_token_type.clone()], // USDC 代币类型参数
             vec![
                 bcs::to_bytes(&amount)?,                    // amount
-                bcs::to_bytes(&self.contract_address)?,      // cfg_addr
+                bcs::to_bytes(&self.contract_address)?,      // admin_addr
             ],
         ));
 
@@ -330,15 +332,14 @@ impl AptosClient {
 
         let user_addr = AccountAddress::from_str(user_address)?;
 
-        // 创建解冻资金的交易载荷 - 调用vault_fa::withdraw_to
+        // 创建解冻资金的交易载荷 - 调用vault_coin::withdraw_for
         let payload = TransactionPayload::EntryFunction(EntryFunction::new(
-            ModuleId::new(self.contract_address, "vault_fa".to_string()),
-            "withdraw_to".to_string(),
-            vec![], // 类型参数
+            ModuleId::new(self.contract_address, "vault_coin".to_string()),
+            "withdraw_for".to_string(),
+            vec![self.usdc_token_type.clone()], // USDC 代币类型参数
             vec![
-                bcs::to_bytes(&user_addr)?,              // recipient
+                bcs::to_bytes(&user_addr)?,              // to
                 bcs::to_bytes(&amount)?,                  // amount
-                bcs::to_bytes(&self.contract_address)?,   // cfg_addr
             ],
         ));
 
@@ -369,30 +370,17 @@ impl AptosClient {
         let resources = self.client.get_account_resources(self.admin_address.to_string()).await?;
         let sequence_number = self.get_sequence_number(&resources.into_inner())?;
 
-        // 创建批量解冻的交易载荷
-        let payload = TransactionPayload::EntryFunction(EntryFunction::new(
-            ModuleId::new(self.contract_address, "vault_fa".to_string()),
-            "batch_withdraw".to_string(),
-            vec![],
-            vec![
-                bcs::to_bytes(&unfreeze_requests)?,
-                bcs::to_bytes(&self.contract_address)?,
-            ],
-        ));
+        // 由于 vault_coin 模块没有批量操作，我们循环调用单个 withdraw_for
+        let mut tx_hashes = Vec::new();
+        
+        for (user_address, amount) in unfreeze_requests {
+            let tx_hash = self.unfreeze_user_funds(&user_address, amount).await?;
+            tx_hashes.push(tx_hash);
+        }
 
-        let raw_txn = RawTransaction::new(
-            self.admin_address,
-            sequence_number,
-            payload,
-            500_000, // 更高的gas限制
-            100,
-            self.get_expiration_timestamp().await?,
-            self.chain_id,
-        );
-
-        let tx_hash = self.sign_and_submit_transaction(raw_txn).await?;
-        info!("Batch unfreeze submitted: tx {}", tx_hash);
-        Ok(tx_hash)
+        info!("Batch unfreeze completed: {} transactions", tx_hashes.len());
+        // 返回最后一个交易哈希作为代表
+        Ok(tx_hashes.last().unwrap_or(&"no_transactions".to_string()).clone())
     }
 
     // ==================== 通用辅助方法 ====================

@@ -33,6 +33,7 @@ pub struct AptosConfig {
     pub admin_private_key: String,
     pub contract_address: String,
     pub chain_id: u8,
+    pub usdc_token_type: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -61,6 +62,7 @@ impl Default for Config {
                 admin_private_key: "".to_string(),
                 contract_address: "0xc0ffee".to_string(),
                 chain_id: 2, // testnet
+                usdc_token_type: "0x29b0681a76b20595201859a5d2b269ae9d1fe98251198cefa513c95267003c0c::mint_test_coin::Coin".to_string(),
             },
             settlement: SettlementConfig {
                 batch_size: 10,
