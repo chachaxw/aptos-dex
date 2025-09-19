@@ -126,3 +126,55 @@ pub async fn get_user_trades(
     info!("Retrieved {} trades for user {}", response.total, user_address);
     Ok(Json(response))
 }
+
+/// 查询所有交易记录（不指定用户）
+pub async fn get_all_trades(
+    State(state): State<SharedState>,
+    Query(params): Query<UserTradesQuery>,
+) -> Result<Json<UserTradesResponse>, StatusCode> {
+    info!("Querying all trades");
+
+    // 解析时间参数
+    let start_time = if let Some(start_str) = &params.start_time {
+        match chrono::DateTime::parse_from_rfc3339(start_str) {
+            Ok(dt) => Some(dt.with_timezone(&chrono::Utc)),
+            Err(e) => {
+                error!("Invalid start_time format: {}", e);
+                return Err(StatusCode::BAD_REQUEST);
+            }
+        }
+    } else {
+        None
+    };
+
+    let end_time = if let Some(end_str) = &params.end_time {
+        match chrono::DateTime::parse_from_rfc3339(end_str) {
+            Ok(dt) => Some(dt.with_timezone(&chrono::Utc)),
+            Err(e) => {
+                error!("Invalid end_time format: {}", e);
+                return Err(StatusCode::BAD_REQUEST);
+            }
+        }
+    } else {
+        None
+    };
+
+    // 查询所有交易记录
+    let trades = state.database.get_all_trades(
+        start_time,
+        end_time,
+        params.limit,
+        params.offset,
+    ).await.map_err(|e| {
+        error!("Failed to get all trades: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    let response = UserTradesResponse {
+        total: trades.len(),
+        trades,
+    };
+
+    info!("Retrieved {} trades (all)", response.total);
+    Ok(Json(response))
+}
