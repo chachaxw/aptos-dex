@@ -16,6 +16,12 @@ module hyperperp::config {
         let c = borrow_global<Config>(admin_addr);
         object::address_to_object<Metadata>(c.usdc_meta_addr)
     }
+
+    public entry fun update_usdc_meta(admin: &signer, new_usdc_meta_addr: address) acquires Config {
+        let a = signer::address_of(admin);
+        let c = borrow_global_mut<Config>(a);
+        c.usdc_meta_addr = new_usdc_meta_addr;
+    }
 }
 
 

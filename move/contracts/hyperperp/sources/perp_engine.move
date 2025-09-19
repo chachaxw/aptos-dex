@@ -6,7 +6,7 @@ module hyperperp::perp_engine {
     use hyperperp::account as acct;
     use hyperperp::positions as pos;
     use hyperperp::risk;
-    use hyperperp::vault_fa as vfa;
+    use hyperperp::vault_coin as vfa;
 
     /// Fill and batch structs for perpetual trading
     public struct BatchFill has drop, store, copy { 
