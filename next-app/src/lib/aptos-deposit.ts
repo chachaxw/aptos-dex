@@ -7,7 +7,7 @@ import { useWallet } from '@aptos-labs/wallet-adapter-react';
 import { AptosClient, AptosAccount } from 'aptos';
 
 const NODE_URL = process.env.NEXT_PUBLIC_APTOS_NODE_URL || 'https://fullnode.testnet.aptoslabs.com/v1';
-const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS || '0x6ebb801151358d368726cd892d6f6138cd387156bd9c16f8b8bc62223343b696';
+const CONTRACT_ADDRESS = process.env.NEXT_PUBLIC_CONTRACT_ADDRESS;
 const aptCoinStoreType = `0x1::coin::CoinStore<0x29b0681a76b20595201859a5d2b269ae9d1fe98251198cefa513c95267003c0c::mint_test_coin::Coin>`;
 
 export interface DepositTransaction {

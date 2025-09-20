@@ -71,7 +71,7 @@ export function TradingInterface() {
       )}
 
       {/* Main Trading Layout */}
-      {connected && account && isInitialized !== false && (
+      {isInitialized !== false && (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-2">
           {/* Left Column: Chart and Market Data */}
           <div className="lg:col-span-2 space-y-2">
