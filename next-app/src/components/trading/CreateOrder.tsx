@@ -153,8 +153,6 @@ export function CreateOrder({
     [account?.address, marketId, onOrderSubmitted, orderData.orderType, orderData.price, orderData.side, orderData.size, toast]
   );
 
-  console.log('返回参数:', freezeResponse);
-
   const handleSignOrder = useCallback(
     async (freezeResponse: FreezeTransactionResponse) => {
       if (!account) return;
