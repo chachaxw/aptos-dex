@@ -96,11 +96,7 @@ export function CreateOrder({
   }, [orderData.size, orderData.price, orderData.side]);
 
   const handleConfirmOrder = useCallback(
-    async (txHash: string) => {
-
-      console.log(freezeResponse);
-
-      if (!freezeResponse) return;
+    async (freezeResponse: FreezeTransactionResponse, txHash: string) => {
 
       try {
         const confirmRequest = {
@@ -141,15 +137,7 @@ export function CreateOrder({
         onOrderSubmitted?.(confirmData.order.id, txHash);
 
         // Reset form
-        setOrderData({
-          side: "Buy",
-          orderType: "Limit",
-          size: "",
-          price: "",
-          reduceOnly: false,
-          postOnly: false,
-          timeInForce: "GTC",
-        });
+        setOrderData((state) => ({ ...state, size: "", price: "" }));
 
         setFreezeResponse(null);
       } catch (err: any) {
@@ -162,7 +150,7 @@ export function CreateOrder({
         });
       }
     },
-    [account?.address, freezeResponse, marketId, onOrderSubmitted, orderData.orderType, orderData.price, orderData.side, orderData.size, toast]
+    [account?.address, marketId, onOrderSubmitted, orderData.orderType, orderData.price, orderData.side, orderData.size, toast]
   );
 
   const handleSignOrder = useCallback(
@@ -198,7 +186,7 @@ export function CreateOrder({
           )}...${response.hash.slice(-4)}`,
         });
 
-        await handleConfirmOrder(response.hash);
+        await handleConfirmOrder(freezeResponse, response.hash);
       } catch (err: any) {
         console.error("Freeze signing failed:", err);
         setError(err.message || "Failed to sign freeze transaction");

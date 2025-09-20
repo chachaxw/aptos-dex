@@ -219,10 +219,34 @@ impl AptosClient {
         
         let collateral = self.get_user_collateral(user_address).await?;
         let has_sufficient = collateral >= required_amount;
-        
+
         if !has_sufficient {
             warn!("Insufficient collateral for user {}: required {}, available {}", 
                 user_address, required_amount, collateral);
+        }
+        
+        Ok(has_sufficient)
+    }
+
+    /// 验证用户是否有足够的代币余额
+    pub async fn validate_user_balance(
+        &self,
+        user_address: &str,
+        required_amount: u64,
+    ) -> Result<bool> {
+        info!("Validating balance for user {}: required {} test coins", user_address, required_amount);
+        
+        // 使用 get_account_balance 获取用户测试币余额
+        let balance = self.client.get_account_balance(user_address.to_string(), self.usdc_token_type.clone()).await?;
+        let user_balance = balance.inner().as_u64().unwrap_or(0) / 1_000_000;
+        let has_sufficient = user_balance >= required_amount;
+
+        if !has_sufficient {
+            warn!("Insufficient balance for user {}: required {}, available {}", 
+                user_address, required_amount, user_balance);
+        } else {
+            info!("Sufficient balance for user {}: required {}, available {}", 
+                user_address, required_amount, user_balance);
         }
         
         Ok(has_sufficient)
@@ -439,7 +463,7 @@ impl AptosClient {
         user_address: &str,
         amount: u64,
     ) -> Result<String> {
-        info!("Depositing {} APT for user {}", amount, user_address);
+        info!("Depositing {} USDC for user {}", amount, user_address);
 
         // 获取用户账户信息
         let resources = self.client.get_account_resources(user_address.to_string()).await?;

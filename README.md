@@ -26,10 +26,16 @@ Please read each directory's README carefully to understand how to use the templ
 - `move` directory for the contract and integration tests
 - `next-app` directory for the Next.js frontend
 - `node-scripts` directory for some quick scripts to interact with the contract in Node.js
-- `rust-indexer` directory for custom indexer in Rust on the contract
+- `rust-matching-engine` directory for matching engine in Rust on the contract
 - `ts-indexer` directory for custom indexer in TypeScript on the contract
 
 > `rust-indexer` vs `ts-indexer`: we recommend ts version for rapid prototyping because of simplicity, when you want to move to production, you can use the rust version which is complex but performant. In this template, both indexers are implemented and handle the same logic, you can compare the two implementations.
+
+## Screenshots
+
+![Screenshot 1](./Screenshot%202025-09-20%20at%2011.16.59.png)
+![Screenshot 2](./Screenshot%202025-09-20%20at%2011.17.10.png)
+
 
 ## Using [GitHub Codespace](https://github.com/features/codespaces)
 
