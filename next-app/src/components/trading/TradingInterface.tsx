@@ -15,6 +15,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { useHyperPerpAccount } from "@/lib/useHyperPerpAccount";
 import { OrderWithFreeze } from "./OrderWithFreeze";
 import { CreateOrder } from "./CreateOrder";
+import { DepositFunds } from "./DepositFunds";
 
 const MARKETS = {
   1: { symbol: "BTC-USDC", name: "Bitcoin", icon: "₿" },

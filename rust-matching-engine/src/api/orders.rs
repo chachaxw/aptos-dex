@@ -304,7 +304,7 @@ pub async fn request_freeze_transaction(
     // Create freeze transaction payload
     let freeze_payload = FreezeTransactionPayload {
         function: format!("{}::vault_coin::deposit", state.config.aptos.contract_address),
-        type_arguments: vec!["0x29b0681a76b20595201859a5d2b269ae9d1fe98251198cefa513c95267003c0c::mint_test_coin::Coin".to_string()],
+        type_arguments: vec![state.config.aptos.usdc_token_type.clone()],
         arguments: vec![
             state.config.aptos.admin_address.to_string(),
             (required_collateral*1000000).to_string(),
