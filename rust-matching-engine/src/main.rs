@@ -25,7 +25,7 @@ use crate::{
         health::health_check,
         markets::{get_market, get_all_markets},
         deposit::deposit_funds,
-        user_queries::{get_user_orders, get_user_trades, get_all_trades},
+        user_queries::{get_user_orders, get_user_trades, get_all_trades, get_market_trades},
     },
     database::Database,
     aptos_client::AptosClient,
@@ -109,6 +109,7 @@ async fn main() -> Result<()> {
         .route("/orders/user/:user_address", get(get_user_orders))
         .route("/trades/user/:user_address", get(get_user_trades))
         .route("/trades", get(get_all_trades))
+        .route("/trades/:market_id", get(get_market_trades))
         .layer(CorsLayer::permissive())
         .with_state(state);
 

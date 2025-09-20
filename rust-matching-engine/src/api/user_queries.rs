@@ -178,3 +178,30 @@ pub async fn get_all_trades(
     info!("Retrieved {} trades (all)", response.total);
     Ok(Json(response))
 }
+
+/// 根据市场ID查询交易记录
+pub async fn get_market_trades(
+    State(state): State<SharedState>,
+    Path(market_id): Path<u64>,
+    Query(params): Query<UserTradesQuery>,
+) -> Result<Json<UserTradesResponse>, StatusCode> {
+    info!("Querying trades for market: {}", market_id);
+
+    // 查询市场交易记录
+    let trades = state.database.get_trades_by_market(
+        market_id,
+        params.limit,
+        params.offset,
+    ).await.map_err(|e| {
+        error!("Failed to get market trades: {}", e);
+        StatusCode::INTERNAL_SERVER_ERROR
+    })?;
+
+    let response = UserTradesResponse {
+        total: trades.len(),
+        trades,
+    };
+
+    info!("Retrieved {} trades for market {}", response.total, market_id);
+    Ok(Json(response))
+}
