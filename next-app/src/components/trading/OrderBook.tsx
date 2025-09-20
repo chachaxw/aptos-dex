@@ -87,7 +87,7 @@ export function OrderBook({
 
   const fetchRecentTrades = useCallback(async () => {
     try {
-      const trades = await matchingEngine.getRecentTrades(marketId);
+      const { trades } = await matchingEngine.getRecentTrades(marketId);
       setRecentTrades(trades);
     } catch (error) {
       console.error("Failed to fetch recent trades:", error);
@@ -260,7 +260,7 @@ export function OrderBook({
       </CardHeader>
 
       <CardContent className="p-0">
-        <Tabs defaultValue="book" className="w-full px-2">
+        <Tabs defaultValue="book" className="w-full px-2" onValueChange={() => refreshData()}>
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="book">Book</TabsTrigger>
             <TabsTrigger value="trades">Trades</TabsTrigger>

@@ -159,11 +159,11 @@ export class MatchingEngineClient {
     return response.json();
   }
 
-  async getRecentTrades(marketId: number, limit: number = 50): Promise<Trade[]> {
+  async getRecentTrades(marketId: number, limit: number = 50): Promise<{ total: number, trades: Trade[] }> {
     const response = await fetch(`${this.baseUrl}/trades/${marketId}?limit=${limit}`);
     
     if (!response.ok) {
-      return []; // Return empty array if endpoint doesn't exist yet
+      return { total: 0, trades: [] }; // Return empty array if endpoint doesn't exist yet
     }
 
     return response.json();

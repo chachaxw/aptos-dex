@@ -58,9 +58,9 @@ impl Default for Config {
             },
             aptos: AptosConfig {
                 node_url: "https://fullnode.testnet.aptoslabs.com/v1".to_string(),
-                admin_address: "0x6ebb801151358d368726cd892d6f6138cd387156bd9c16f8b8bc62223343b696".to_string(),
-                admin_private_key: "ed25519-priv-0x85087dfcba441854291cbec993d857ac4118efaf2d2ed5665a4f92c7664eadba".to_string(),
-                contract_address: "0x6ebb801151358d368726cd892d6f6138cd387156bd9c16f8b8bc62223343b696".to_string(),
+                admin_address: "0x517206cb6757cc0723667a05afb9c05675341cd79570ba7cfb72f63241d55a2e".to_string(),
+                admin_private_key: "ed25519-pub-0x6e64ca879ec336085ba8a8e457c322edf75ce9693154dd092de59d08bbf0ee4a".to_string(),
+                contract_address: "0x803a8d31f59437b82e4206ce8431a43374bc39e4f48a41c5208e84ac0a2a1209".to_string(),
                 chain_id: 2, // testnet
                 usdc_token_type: "0x29b0681a76b20595201859a5d2b269ae9d1fe98251198cefa513c95267003c0c::mint_test_coin::Coin".to_string(),
             },

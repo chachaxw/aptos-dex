@@ -291,22 +291,22 @@ pub async fn request_freeze_transaction(
     // Calculate required collateral
     let required_collateral = calculate_required_collateral(&order);
     
-    // Validate user has sufficient collateral
-    if !state.aptos_client.validate_collateral(&req.user_address, required_collateral).await
+    // Validate user has sufficient balance
+    if !state.aptos_client.validate_user_balance(&req.user_address, required_collateral).await
         .map_err(|e| {
-            error!("Failed to validate collateral: {}", e);
+            error!("Failed to validate user balance: {}", e);
             StatusCode::INTERNAL_SERVER_ERROR
         })? {
-        warn!("Insufficient collateral for user {}: required {}", req.user_address, required_collateral);
+        warn!("Insufficient balance for user {}: required {}", req.user_address, required_collateral);
         return Err(StatusCode::BAD_REQUEST);
     }
 
     // Create freeze transaction payload
     let freeze_payload = FreezeTransactionPayload {
         function: format!("{}::vault_coin::deposit", state.config.aptos.contract_address),
-        type_arguments: vec!["0x29b0681a76b20595201859a5d2b269ae9d1fe98251198cefa513c95267003c0c::mint_test_coin::Coin".to_string()],
+        type_arguments: vec![state.config.aptos.usdc_token_type.clone()],
         arguments: vec![
-            state.config.aptos.contract_address.to_string(),
+            state.config.aptos.admin_address.to_string(),
             (required_collateral*1000000).to_string(),
         ],
         gas_limit: 100_000,
