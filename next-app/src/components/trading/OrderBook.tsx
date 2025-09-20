@@ -279,7 +279,7 @@ export function OrderBook({
               {/* Asks (Sell Orders) */}
               <div className="space-y-0">
                 {orderBook?.asks
-                  .slice(0, 10)
+                  .slice(0, 20)
                   .map((level) => renderOrderBookLevel(level, "ask", maxSize))}
               </div>
 
@@ -299,7 +299,7 @@ export function OrderBook({
               {/* Bids (Buy Orders) */}
               <div className="space-y-0">
                 {orderBook?.bids
-                  .slice(0, 10)
+                  .slice(0, 20)
                   .map((level) => renderOrderBookLevel(level, "bid", maxSize))}
               </div>
             </div>

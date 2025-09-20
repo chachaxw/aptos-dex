@@ -97,7 +97,6 @@ export function CreateOrder({
 
   const handleConfirmOrder = useCallback(
     async (freezeResponse: FreezeTransactionResponse, txHash: string) => {
-
       try {
         const confirmRequest = {
           market_id: marketId,
@@ -150,7 +149,16 @@ export function CreateOrder({
         });
       }
     },
-    [account?.address, marketId, onOrderSubmitted, orderData.orderType, orderData.price, orderData.side, orderData.size, toast]
+    [
+      account?.address,
+      marketId,
+      onOrderSubmitted,
+      orderData.orderType,
+      orderData.price,
+      orderData.side,
+      orderData.size,
+      toast,
+    ]
   );
 
   const handleSignOrder = useCallback(
@@ -439,36 +447,32 @@ export function CreateOrder({
         </div>
 
         {/* Order Summary */}
-        {orderData.size &&
-          orderData.orderType === "Limit" &&
-          orderData.price && (
-            <div className={`p-3 rounded-lg border ${sideBg}`}>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span>Order Value:</span>
-                  <span className="font-medium">
-                    ${estimatedCost.toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Est. Fee (0.1%):</span>
-                  <span>${(estimatedCost * 0.001).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Total Cost:</span>
-                  <span className="font-bold">
-                    ${(estimatedCost * 1.001).toFixed(2)}
-                  </span>
-                </div>
-                {orderData.side === "Buy" && (
-                  <div className="flex justify-between text-xs">
-                    <span>Available:</span>
-                    <span>${maxBuyPower.toFixed(2)}</span>
-                  </div>
-                )}
+        {orderData.orderType === "Limit" && (
+          <div className={`p-3 rounded-lg border ${sideBg}`}>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span>Order Value:</span>
+                <span className="font-medium">${estimatedCost.toFixed(2)}</span>
               </div>
+              <div className="flex justify-between">
+                <span>Est. Fee (0.1%):</span>
+                <span>${(estimatedCost * 0.001).toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Total Cost:</span>
+                <span className="font-bold">
+                  ${(estimatedCost * 1.001).toFixed(2)}
+                </span>
+              </div>
+              {orderData.side === "Buy" && (
+                <div className="flex justify-between text-xs">
+                  <span>Available:</span>
+                  <span>${maxBuyPower.toFixed(2)}</span>
+                </div>
+              )}
             </div>
-          )}
+          </div>
+        )}
 
         {/* Submit Button */}
         <Button
