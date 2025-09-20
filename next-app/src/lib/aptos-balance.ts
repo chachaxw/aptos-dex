@@ -10,7 +10,7 @@ export interface AptosBalance {
 export async function fetchAptBalance(address: string): Promise<number> {
   try {
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_APTOS_NODE_URL}/accounts/${address}/resources`
+      `${process.env.NEXT_PUBLIC_APTOS_NODE_URL}/accounts/${address}/balance/0x29b0681a76b20595201859a5d2b269ae9d1fe98251198cefa513c95267003c0c::mint_test_coin::Coin`
     );
 
     if (!response.ok) {
@@ -18,18 +18,15 @@ export async function fetchAptBalance(address: string): Promise<number> {
     }
 
     const data = await response.json();
-    const coinStore = data?.find((r: any) => r.type.includes(`${process.env.NEXT_PUBLIC_CONTRACT_ADDRESS}::account::Account`));
-    
-    console.log('Data:', data);
-    console.log('Coin store:', coinStore);
 
-    if (coinStore) {
-      const balance = parseInt(coinStore.data.collateral);
-      const balanceInCoins = balance / 1_000_000; // 6 decimals
-      console.log('✅ Admin balance:', balanceInCoins, 'USDC');
+    console.log('Data:', data);
+
+    if (data) {
+      const balanceInCoins = data / 1_000_000; // 6 decimals
+      console.log('✅ Balance:', balanceInCoins, 'USDC');
       return balanceInCoins // Convert from octas to USDC
     } else {
-      console.log('❌ Coin store not found for user');
+      console.log('❌ Balance not found for user');
     }
 
     return 0;
